@@ -1,6 +1,7 @@
 package nft
 
 import (
+	"github.com/nfinita/first-market/cadence/tests/go/fusd"
 	"regexp"
 	"testing"
 
@@ -18,21 +19,21 @@ import (
 )
 
 const (
-	kittyItemsTransactionsRootPath = "../../transactions/kittyItems"
-	kittyItemsScriptsRootPath      = "../../scripts/kittyItems"
+	metaBearTransactionsRootPath = "../../transactions/metaBear"
+	metaBearScriptsRootPath      = "../../scripts/metaBear"
 
-	kittyItemsContractPath            = "../../contracts/KittyItems.cdc"
-	kittyItemsSetupAccountPath        = kittyItemsTransactionsRootPath + "/setup_account.cdc"
-	kittyItemsMintKittyItemPath       = kittyItemsTransactionsRootPath + "/mint_kitty_item.cdc"
-	kittyItemsTransferKittyItemPath   = kittyItemsTransactionsRootPath + "/transfer_kitty_item.cdc"
-	kittyItemsGetKittyItemSupplyPath  = kittyItemsScriptsRootPath + "/get_kitty_items_supply.cdc"
-	kittyItemsGetCollectionLengthPath = kittyItemsScriptsRootPath + "/get_collection_length.cdc"
+	metaBearContractPath            = "../../contracts/MetaBear.cdc"
+	metaBearSetupAccountPath        = metaBearTransactionsRootPath + "/setup_meta_bear.cdc"
+	metaBearMintMetaBearPath       = metaBearTransactionsRootPath + "/mint_meta_bear.cdc"
+	metaBearTransferMetaBearPath   = metaBearTransactionsRootPath + "/transfer_meta_bear.cdc"
+	metaBearGetMetaBearSupplyPath  = metaBearScriptsRootPath + "/get_meta_bear_supply.cdc"
+	metaBearGetCollectionLengthPath = metaBearScriptsRootPath + "/get_collection_length.cdc"
 )
 
 func DeployContracts(
 	t *testing.T,
 	b *emulator.Blockchain,
-) (flow.Address, flow.Address, crypto.Signer) {
+) (flow.Address, flow.Address, flow.Address, flow.Address, crypto.Signer, crypto.Signer) {
 	accountKeys := sdktest.AccountKeyGenerator()
 
 	// should be able to deploy a contract as a new account with no keys
@@ -48,30 +49,37 @@ func DeployContracts(
 	)
 	require.NoError(t, err)
 
+	// should be able to deploy a contract as a new account with no keys
+	ftAddress, fusdAddr, fusdSigner := fusd.DeployContracts(t, b)
+
 	_, err = b.CommitBlock()
 	assert.NoError(t, err)
 
 	// should be able to deploy a contract as a new account with one key
-	kittyItemsAccountKey, kittyItemsSigner := accountKeys.NewWithSigner()
-	kittyItemsCode := loadKittyItems(nftAddress.String())
-	kittyItemsAddr, err := b.CreateAccount(
-		[]*flow.AccountKey{kittyItemsAccountKey},
+	metaBearAccountKey, metaBearSigner := accountKeys.NewWithSigner()
+	metaBearCode := loadMetaBear(nftAddress.String(), ftAddress.String(), fusdAddr.String())
+
+	metaBearAddr, err := b.CreateAccount(
+		[]*flow.AccountKey{metaBearAccountKey},
 		[]sdktemplates.Contract{
 			{
-				Name:   "KittyItems",
-				Source: string(kittyItemsCode),
+				Name:   "MetaBear",
+				Source: string(metaBearCode),
 			},
 		},
 	)
+	print("METABEAR ADDRESS CODE =======\n")
+	print(metaBearAccountKey, "\n", metaBearAddr.String())
+	print("\nMETABEAR ADDRESS CODE END =======\n")
 	assert.NoError(t, err)
 
 	_, err = b.CommitBlock()
 	assert.NoError(t, err)
 
 	// simplify the workflow by having the contract address also be our initial test collection
-	SetupAccount(t, b, kittyItemsAddr, kittyItemsSigner, nftAddress, kittyItemsAddr)
+	SetupAccount(t, b, metaBearAddr, metaBearSigner, nftAddress, metaBearAddr)
 
-	return nftAddress, kittyItemsAddr, kittyItemsSigner
+	return ftAddress, fusdAddr, nftAddress, metaBearAddr, metaBearSigner, fusdSigner
 }
 
 func SetupAccount(
@@ -80,10 +88,10 @@ func SetupAccount(
 	userAddress flow.Address,
 	userSigner crypto.Signer,
 	nftAddress flow.Address,
-	kittyItemsAddress flow.Address,
+	metaBearAddress flow.Address,
 ) {
 	tx := flow.NewTransaction().
-		SetScript(SetupAccountScript(nftAddress.String(), kittyItemsAddress.String())).
+		SetScript(SetupAccountScript(nftAddress.String(), metaBearAddress.String())).
 		SetGasLimit(100).
 		SetProposalKey(b.ServiceKey().Address, b.ServiceKey().Index, b.ServiceKey().SequenceNumber).
 		SetPayer(b.ServiceKey().Address).
@@ -99,121 +107,133 @@ func SetupAccount(
 
 func MintItem(
 	t *testing.T, b *emulator.Blockchain,
-	nftAddress, kittyItemsAddr flow.Address,
-	kittyItemsSigner crypto.Signer, typeID uint64,
+	nftAddress, metaBearAddr flow.Address,
+	metaBearSigner crypto.Signer, typeID uint64,
 ) {
-    metadata := []cadence.KeyValuePair{
-         {
-              Key:   cadence.String("title"),
-              Value: cadence.String("New NFT"),
-         },
-         {
-              Key:   cadence.String("description"),
-              Value: cadence.String("New NFT Description"),
-         },
-         {
-              Key:   cadence.String("imageURL"),
-              Value: cadence.String("https://some.url/image"),
-         },
-    }
+	metadata := []cadence.KeyValuePair{
+		{
+			Key:   cadence.String("title"),
+			Value: cadence.String("New NFT"),
+		},
+		{
+			Key:   cadence.String("description"),
+			Value: cadence.String("New NFT Description"),
+		},
+		{
+			Key:   cadence.String("imageURL"),
+			Value: cadence.String("https://some.url/image"),
+		},
+	}
 	tx := flow.NewTransaction().
-		SetScript(MintKittyItemScript(nftAddress.String(), kittyItemsAddr.String())).
+		SetScript(MintMetaBearScript(nftAddress.String(), metaBearAddr.String())).
 		SetGasLimit(100).
 		SetProposalKey(b.ServiceKey().Address, b.ServiceKey().Index, b.ServiceKey().SequenceNumber).
 		SetPayer(b.ServiceKey().Address).
-		AddAuthorizer(kittyItemsAddr)
+		AddAuthorizer(metaBearAddr)
 
-	_ = tx.AddArgument(cadence.NewAddress(kittyItemsAddr))
+	_ = tx.AddArgument(cadence.NewAddress(metaBearAddr))
 	_ = tx.AddArgument(cadence.NewUInt64(typeID))
 	_ = tx.AddArgument(cadence.NewDictionary(metadata))
 
 	test.SignAndSubmit(
 		t, b, tx,
-		[]flow.Address{b.ServiceKey().Address, kittyItemsAddr},
-		[]crypto.Signer{b.ServiceKey().Signer(), kittyItemsSigner},
+		[]flow.Address{b.ServiceKey().Address, metaBearAddr},
+		[]crypto.Signer{b.ServiceKey().Signer(), metaBearSigner},
 		false,
 	)
 }
 
 func TransferItem(
 	t *testing.T, b *emulator.Blockchain,
-	nftAddress, kittyItemsAddr flow.Address, kittyItemsSigner crypto.Signer,
+	nftAddress, metaBearAddr flow.Address, metaBearSigner crypto.Signer,
 	typeID uint64, recipientAddr flow.Address, shouldFail bool,
 ) {
 
 	tx := flow.NewTransaction().
-		SetScript(TransferKittyItemScript(nftAddress.String(), kittyItemsAddr.String())).
+		SetScript(TransferMetaBearScript(nftAddress.String(), metaBearAddr.String())).
 		SetGasLimit(100).
 		SetProposalKey(b.ServiceKey().Address, b.ServiceKey().Index, b.ServiceKey().SequenceNumber).
 		SetPayer(b.ServiceKey().Address).
-		AddAuthorizer(kittyItemsAddr)
+		AddAuthorizer(metaBearAddr)
 
 	_ = tx.AddArgument(cadence.NewAddress(recipientAddr))
 	_ = tx.AddArgument(cadence.NewUInt64(typeID))
 
 	test.SignAndSubmit(
 		t, b, tx,
-		[]flow.Address{b.ServiceKey().Address, kittyItemsAddr},
-		[]crypto.Signer{b.ServiceKey().Signer(), kittyItemsSigner},
+		[]flow.Address{b.ServiceKey().Address, metaBearAddr},
+		[]crypto.Signer{b.ServiceKey().Signer(), metaBearSigner},
 		shouldFail,
 	)
 }
 
-func loadKittyItems(nftAddress string) []byte {
-	return []byte(test.ReplaceImports(
-		string(test.ReadFile(kittyItemsContractPath)),
+func loadMetaBear(nftAddress string, ftAddress string, fusdAddress string) []byte {
+	print("\nMETA BEAR CODE ====\n")
+	print(test.ReplaceImports(
+		string(test.ReadFile(metaBearContractPath)),
 		map[string]*regexp.Regexp{
 			nftAddress: test.NonFungibleTokenAddressPlaceholder,
+			ftAddress: test.FungibleTokenAddressPlaceholder,
+			fusdAddress: test.FUSDAddressPlaceHolder,
+		},
+	))
+	print("\n===== META BEAR CODE END ====\n")
+	return []byte(test.ReplaceImports(
+		string(test.ReadFile(metaBearContractPath)),
+		map[string]*regexp.Regexp{
+			nftAddress: test.NonFungibleTokenAddressPlaceholder,
+			ftAddress: test.FungibleTokenAddressPlaceholder,
+			fusdAddress: test.FUSDAddressPlaceHolder,
 		},
 	))
 }
 
-func replaceAddressPlaceholders(code, nftAddress, kittyItemsAddress string) []byte {
+func replaceAddressPlaceholders(code, nftAddress, metaBearAddress string) []byte {
 	return []byte(test.ReplaceImports(
 		code,
 		map[string]*regexp.Regexp{
-			nftAddress:        test.NonFungibleTokenAddressPlaceholder,
-			kittyItemsAddress: test.KittyItemsAddressPlaceHolder,
+			nftAddress:      test.NonFungibleTokenAddressPlaceholder,
+			metaBearAddress: test.MetaBearAddressPlaceHolder,
 		},
 	))
 }
 
-func SetupAccountScript(nftAddress, kittyItemsAddress string) []byte {
+func SetupAccountScript(nftAddress, metaBearAddress string) []byte {
 	return replaceAddressPlaceholders(
-		string(test.ReadFile(kittyItemsSetupAccountPath)),
+		string(test.ReadFile(metaBearSetupAccountPath)),
 		nftAddress,
-		kittyItemsAddress,
+		metaBearAddress,
 	)
 }
 
-func MintKittyItemScript(nftAddress, kittyItemsAddress string) []byte {
+func MintMetaBearScript(nftAddress, metaBearAddress string) []byte {
 	return replaceAddressPlaceholders(
-		string(test.ReadFile(kittyItemsMintKittyItemPath)),
+		string(test.ReadFile(metaBearMintMetaBearPath)),
 		nftAddress,
-		kittyItemsAddress,
+		metaBearAddress,
 	)
 }
 
-func TransferKittyItemScript(nftAddress, kittyItemsAddress string) []byte {
+func TransferMetaBearScript(nftAddress, metaBearAddress string) []byte {
 	return replaceAddressPlaceholders(
-		string(test.ReadFile(kittyItemsTransferKittyItemPath)),
+		string(test.ReadFile(metaBearTransferMetaBearPath)),
 		nftAddress,
-		kittyItemsAddress,
+		metaBearAddress,
 	)
 }
 
-func GetKittyItemSupplyScript(nftAddress, kittyItemsAddress string) []byte {
+func GetMetaBearSupplyScript(nftAddress, metaBearAddress string) []byte {
 	return replaceAddressPlaceholders(
-		string(test.ReadFile(kittyItemsGetKittyItemSupplyPath)),
+		string(test.ReadFile(metaBearGetMetaBearSupplyPath)),
 		nftAddress,
-		kittyItemsAddress,
+		metaBearAddress,
 	)
 }
 
-func GetCollectionLengthScript(nftAddress, kittyItemsAddress string) []byte {
+func GetCollectionLengthScript(nftAddress, metaBearAddress string) []byte {
 	return replaceAddressPlaceholders(
-		string(test.ReadFile(kittyItemsGetCollectionLengthPath)),
+		string(test.ReadFile(metaBearGetCollectionLengthPath)),
 		nftAddress,
-		kittyItemsAddress,
+		metaBearAddress,
 	)
 }

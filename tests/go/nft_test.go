@@ -13,19 +13,20 @@ import (
 
 const typeID = 1000
 
-func TestKittyItemsDeployContracts(t *testing.T) {
+func TestMetaBearDeployContracts(t *testing.T) {
 	b := test.NewBlockchain()
 	nft.DeployContracts(t, b)
 }
 
-func TestCreateKittyItem(t *testing.T) {
+func TestCreateMetaBear(t *testing.T) {
 	b := test.NewBlockchain()
 
-	nftAddress, kittyItemsAddr, kittyItemsSigner := nft.DeployContracts(t, b)
+	_, _, nftAddress, metaBearAddr, _, metaBearSigner :=
+		nft.DeployContracts(t, b)
 
 	supply := test.ExecuteScriptAndCheck(
 		t, b,
-		nft.GetKittyItemSupplyScript(nftAddress.String(), kittyItemsAddr.String()),
+		nft.GetMetaBearSupplyScript(nftAddress.String(), metaBearAddr.String()),
 		nil,
 	)
 	assert.EqualValues(t, cadence.NewUInt64(0), supply)
@@ -33,19 +34,19 @@ func TestCreateKittyItem(t *testing.T) {
 	// assert that the account collection is empty
 	length := test.ExecuteScriptAndCheck(
 		t, b,
-		nft.GetCollectionLengthScript(nftAddress.String(), kittyItemsAddr.String()),
-		[][]byte{jsoncdc.MustEncode(cadence.NewAddress(kittyItemsAddr))},
+		nft.GetCollectionLengthScript(nftAddress.String(), metaBearAddr.String()),
+		[][]byte{jsoncdc.MustEncode(cadence.NewAddress(metaBearAddr))},
 	)
 	assert.EqualValues(t, cadence.NewInt(0), length)
 
-	t.Run("Should be able to mint a kittyItems", func(t *testing.T) {
-		nft.MintItem(t, b, nftAddress, kittyItemsAddr, kittyItemsSigner, typeID)
+	t.Run("Should be able to mint a metaBear", func(t *testing.T) {
+		nft.MintItem(t, b, nftAddress, metaBearAddr, metaBearSigner, typeID)
 
 		// assert that the account collection is correct length
 		length = test.ExecuteScriptAndCheck(
 			t, b,
-			nft.GetCollectionLengthScript(nftAddress.String(), kittyItemsAddr.String()),
-			[][]byte{jsoncdc.MustEncode(cadence.NewAddress(kittyItemsAddr))},
+			nft.GetCollectionLengthScript(nftAddress.String(), metaBearAddr.String()),
+			[][]byte{jsoncdc.MustEncode(cadence.NewAddress(metaBearAddr))},
 		)
 		assert.EqualValues(t, cadence.NewInt(1), length)
 	})
@@ -54,17 +55,18 @@ func TestCreateKittyItem(t *testing.T) {
 func TestTransferNFT(t *testing.T) {
 	b := test.NewBlockchain()
 
-	nftAddress, kittyItemsAddr, kittyItemsSigner := nft.DeployContracts(t, b)
+	_, _, nftAddress, metaBearAddr, _, metaBearSigner :=
+		nft.DeployContracts(t, b)
 
 	userAddress, userSigner, _ := test.CreateAccount(t, b)
 
 	// create a new Collection
 	t.Run("Should be able to create a new empty NFT Collection", func(t *testing.T) {
-		nft.SetupAccount(t, b, userAddress, userSigner, nftAddress, kittyItemsAddr)
+		nft.SetupAccount(t, b, userAddress, userSigner, nftAddress, metaBearAddr)
 
 		length := test.ExecuteScriptAndCheck(
 			t, b,
-			nft.GetCollectionLengthScript(nftAddress.String(), kittyItemsAddr.String()),
+			nft.GetCollectionLengthScript(nftAddress.String(), metaBearAddr.String()),
 			[][]byte{jsoncdc.MustEncode(cadence.NewAddress(userAddress))},
 		)
 		assert.EqualValues(t, cadence.NewInt(0), length)
@@ -75,18 +77,18 @@ func TestTransferNFT(t *testing.T) {
 
 		nft.TransferItem(
 			t, b,
-			nftAddress, kittyItemsAddr, kittyItemsSigner,
+			nftAddress, metaBearAddr, metaBearSigner,
 			nonExistentID, userAddress, true,
 		)
 	})
 
 	// transfer an NFT
 	t.Run("Should be able to withdraw an NFT and deposit to another accounts collection", func(t *testing.T) {
-		nft.MintItem(t, b, nftAddress, kittyItemsAddr, kittyItemsSigner, typeID)
+		nft.MintItem(t, b, nftAddress, metaBearAddr, metaBearSigner, typeID)
 		// Cheat: we have minted one item, its ID will be zero
 		nft.TransferItem(
 			t, b,
-			nftAddress, kittyItemsAddr, kittyItemsSigner,
+			nftAddress, metaBearAddr, metaBearSigner,
 			0, userAddress, false,
 		)
 	})

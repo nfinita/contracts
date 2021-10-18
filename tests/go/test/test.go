@@ -18,20 +18,20 @@ import (
 
 type Contracts struct {
 	FungibleTokenAddress    flow.Address
-	KibbleAddress           flow.Address
-	KibbleSigner            crypto.Signer
+	FUSDAddress             flow.Address
+	FUSDSigner              crypto.Signer
 	NonFungibleTokenAddress flow.Address
-	KittyItemsAddress       flow.Address
-	KittyItemsSigner        crypto.Signer
+	MetaBearAddress         flow.Address
+	MetaBearSigner          crypto.Signer
 	NfinitaMarketAddress    flow.Address
 	NfinitaMarketSigner     crypto.Signer
 }
 
 var (
 	FungibleTokenAddressPlaceholder    = regexp.MustCompile(`"[^"\s].*/FungibleToken.cdc"`)
-	KibbleAddressPlaceHolder           = regexp.MustCompile(`"[^"\s].*/Kibble.cdc"`)
+	FUSDAddressPlaceHolder             = regexp.MustCompile(`"[^"\s].*/FUSD.cdc"`)
 	NonFungibleTokenAddressPlaceholder = regexp.MustCompile(`"[^"\s].*/NonFungibleToken.cdc"`)
-	KittyItemsAddressPlaceHolder       = regexp.MustCompile(`"[^"\s].*/KittyItems.cdc"`)
+	MetaBearAddressPlaceHolder         = regexp.MustCompile(`"[^"\s].*/MetaBear.cdc"`)
 	NfinitaMarketPlaceholder           = regexp.MustCompile(`"[^"\s].*/NfinitaMarket.cdc"`)
 )
 

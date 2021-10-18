@@ -13,6 +13,7 @@ import (
 	sdktest "github.com/onflow/flow-go-sdk/test"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/nfinita/first-market/cadence/tests/go/fusd"
 	"github.com/nfinita/first-market/cadence/tests/go/nft"
 	"github.com/nfinita/first-market/cadence/tests/go/test"
 )
@@ -22,24 +23,25 @@ const (
 
 	nfinitaMarketTransactionRootPath = "../../transactions/nfinitaMarket"
 	nfinitaMarketSetupAccountPath    = nfinitaMarketTransactionRootPath + "/setup_account.cdc"
-	nfinitaMarketSellItemPath        = nfinitaMarketTransactionRootPath + "/sell_item_kibble.cdc"
-	nfinitaMarketBuyItemPath         = nfinitaMarketTransactionRootPath + "/buy_item_kibble.cdc"
+	nfinitaMarketSellItemPath        = nfinitaMarketTransactionRootPath + "/sell_item_fusd.cdc"
+	nfinitaMarketBuyItemPath         = nfinitaMarketTransactionRootPath + "/buy_item_fusd.cdc"
 	nfinitaMarketRemoveItemPath      = nfinitaMarketTransactionRootPath + "/remove_item.cdc"
 )
 
 func DeployContracts(t *testing.T, b *emulator.Blockchain) test.Contracts {
 	accountKeys := sdktest.AccountKeyGenerator()
 
-	fungibleTokenAddress, kibbleAddress, kibbleSigner := kibble.DeployContracts(t, b)
-	nonFungibleTokenAddress, kittyItemsAddress, kittyItemsSigner := nft.DeployContracts(t, b)
+	//fungibleTokenAddress, fusdAddress, fusdSigner := fusd.DeployContracts(t, b)
+	fungibleTokenAddress, fusdAddress, nonFungibleTokenAddress, metaBearAddress, fusdSigner, metaBearSigner :=
+		nft.DeployContracts(t, b)
 
 	// Should be able to deploy a contract as a new account with one key.
 	nfinitaMarketAccountKey, nfinitaMarketSigner := accountKeys.NewWithSigner()
 	nfinitaMarketCode := loadNfinitaMarket(
 		fungibleTokenAddress,
 		nonFungibleTokenAddress,
-		kibbleAddress,
-		kittyItemsAddress,
+		fusdAddress,
+		metaBearAddress,
 	)
 
 	nfinitaMarketAddress, err := b.CreateAccount(
@@ -57,16 +59,16 @@ func DeployContracts(t *testing.T, b *emulator.Blockchain) test.Contracts {
 	assert.NoError(t, err)
 
 	// simplify the workflow by having contract addresses also be our initial test storefronts
-	nft.SetupAccount(t, b, kittyItemsAddress, kittyItemsSigner, nonFungibleTokenAddress, kittyItemsAddress)
+	nft.SetupAccount(t, b, metaBearAddress, metaBearSigner, nonFungibleTokenAddress, metaBearAddress)
 	SetupAccount(t, b, nfinitaMarketAddress, nfinitaMarketSigner, nfinitaMarketAddress)
 
 	return test.Contracts{
 		FungibleTokenAddress:    fungibleTokenAddress,
-		KibbleAddress:           kibbleAddress,
-		KibbleSigner:            kibbleSigner,
+		FUSDAddress:             fusdAddress,
+		FUSDSigner:              fusdSigner,
 		NonFungibleTokenAddress: nonFungibleTokenAddress,
-		KittyItemsAddress:       kittyItemsAddress,
-		KittyItemsSigner:        kittyItemsSigner,
+		MetaBearAddress:         metaBearAddress,
+		MetaBearSigner:          metaBearSigner,
 		NfinitaMarketAddress:    nfinitaMarketAddress,
 		NfinitaMarketSigner:     nfinitaMarketSigner,
 	}
@@ -94,15 +96,15 @@ func SetupAccount(
 	)
 }
 
-// Create a new account with the Kibble and KittyItems resources set up BUT no NfinitaMarket resource.
+// Create a new account with the FUSD and MetaBear resources set up BUT no NfinitaMarket resource.
 func CreatePurchaserAccount(
 	t *testing.T,
 	b *emulator.Blockchain,
 	contracts test.Contracts,
 ) (flow.Address, crypto.Signer) {
 	userAddress, userSigner, _ := test.CreateAccount(t, b)
-	kibble.SetupAccount(t, b, userAddress, userSigner, contracts.FungibleTokenAddress, contracts.KibbleAddress)
-	nft.SetupAccount(t, b, userAddress, userSigner, contracts.NonFungibleTokenAddress, contracts.KittyItemsAddress)
+	fusd.SetupAccount(t, b, userAddress, userSigner, contracts.FungibleTokenAddress, contracts.FUSDAddress)
+	nft.SetupAccount(t, b, userAddress, userSigner, contracts.NonFungibleTokenAddress, contracts.MetaBearAddress)
 	return userAddress, userSigner
 }
 
@@ -216,9 +218,9 @@ func replaceAddressPlaceholders(codeBytes []byte, contracts test.Contracts) []by
 		string(codeBytes),
 		map[string]*regexp.Regexp{
 			contracts.FungibleTokenAddress.String():    test.FungibleTokenAddressPlaceholder,
-			contracts.KibbleAddress.String():           test.KibbleAddressPlaceHolder,
+			contracts.FUSDAddress.String():             test.FUSDAddressPlaceHolder,
 			contracts.NonFungibleTokenAddress.String(): test.NonFungibleTokenAddressPlaceholder,
-			contracts.KittyItemsAddress.String():       test.KittyItemsAddressPlaceHolder,
+			contracts.MetaBearAddress.String():         test.MetaBearAddressPlaceHolder,
 			contracts.NfinitaMarketAddress.String():    test.NfinitaMarketPlaceholder,
 		},
 	))
@@ -227,16 +229,16 @@ func replaceAddressPlaceholders(codeBytes []byte, contracts test.Contracts) []by
 func loadNfinitaMarket(
 	fungibleTokenAddress,
 	nonFungibleTokenAddress,
-	kibbleAddress,
-	kittyItemsAddress flow.Address,
+	fusdAddress,
+	metaBearAddress flow.Address,
 ) []byte {
 	return replaceAddressPlaceholders(
 		test.ReadFile(nfinitaMarketContractPath),
 		test.Contracts{
 			FungibleTokenAddress:    fungibleTokenAddress,
-			KibbleAddress:           kibbleAddress,
+			FUSDAddress:             fusdAddress,
 			NonFungibleTokenAddress: nonFungibleTokenAddress,
-			KittyItemsAddress:       kittyItemsAddress,
+			MetaBearAddress:         metaBearAddress,
 		},
 	)
 }

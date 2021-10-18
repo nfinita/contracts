@@ -1,10 +1,11 @@
 package test
 
 import (
+	"github.com/nfinita/first-market/cadence/tests/go/fusd"
 	"testing"
 
-	"github.com/nfinita/first-market/cadence/tests/go/nft"
 	"github.com/nfinita/first-market/cadence/tests/go/nfinitaMarket"
+	"github.com/nfinita/first-market/cadence/tests/go/nft"
 	"github.com/nfinita/first-market/cadence/tests/go/test"
 )
 
@@ -39,8 +40,8 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		nft.MintItem(
 			t, b,
 			contracts.NonFungibleTokenAddress,
-			contracts.KittyItemsAddress,
-			contracts.KittyItemsSigner,
+			contracts.MetaBearAddress,
+			contracts.MetaBearSigner,
 			typeID,
 		)
 
@@ -48,8 +49,8 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		nft.TransferItem(
 			t, b,
 			contracts.NonFungibleTokenAddress,
-			contracts.KittyItemsAddress,
-			contracts.KittyItemsSigner,
+			contracts.MetaBearAddress,
+			contracts.MetaBearSigner,
 			tokenToList,
 			userAddress,
 			false,
@@ -76,8 +77,8 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		nft.MintItem(
 			t, b,
 			contracts.NonFungibleTokenAddress,
-			contracts.KittyItemsAddress,
-			contracts.KittyItemsSigner,
+			contracts.MetaBearAddress,
+			contracts.MetaBearSigner,
 			typeID,
 		)
 
@@ -85,8 +86,8 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		nft.TransferItem(
 			t, b,
 			contracts.NonFungibleTokenAddress,
-			contracts.KittyItemsAddress,
-			contracts.KittyItemsSigner,
+			contracts.MetaBearAddress,
+			contracts.MetaBearSigner,
 			tokenToList,
 			userAddress,
 			false,
@@ -106,11 +107,11 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		buyerAddress, buyerSigner := nfinitaMarket.CreatePurchaserAccount(t, b, contracts)
 
 		// fund the purchase
-		kibble.Mint(
+		fusd.Mint(
 			t, b,
 			contracts.FungibleTokenAddress,
-			contracts.KibbleAddress,
-			contracts.KibbleSigner,
+			contracts.FUSDAddress,
+			contracts.FUSDSigner,
 			buyerAddress,
 			"100.0",
 			false,
@@ -137,8 +138,8 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		nft.MintItem(
 			t, b,
 			contracts.NonFungibleTokenAddress,
-			contracts.KittyItemsAddress,
-			contracts.KittyItemsSigner,
+			contracts.MetaBearAddress,
+			contracts.MetaBearSigner,
 			typeID,
 		)
 
@@ -146,8 +147,8 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		nft.TransferItem(
 			t, b,
 			contracts.NonFungibleTokenAddress,
-			contracts.KittyItemsAddress,
-			contracts.KittyItemsSigner,
+			contracts.MetaBearAddress,
+			contracts.MetaBearSigner,
 			tokenToList,
 			userAddress,
 			false,
