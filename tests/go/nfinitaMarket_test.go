@@ -2,6 +2,8 @@ package test
 
 import (
 	"github.com/nfinita/first-market/cadence/tests/go/fusd"
+	"github.com/onflow/cadence"
+	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"testing"
 
 	"github.com/nfinita/first-market/cadence/tests/go/nfinitaMarket"
@@ -22,7 +24,15 @@ func TestNfinitaMarketSetupAccount(t *testing.T) {
 
 	t.Run("Should be able to create an empty Storefront", func(t *testing.T) {
 		userAddress, userSigner, _ := test.CreateAccount(t, b)
-		nfinitaMarket.SetupAccount(t, b, userAddress, userSigner, contracts.NfinitaMarketAddress)
+		nfinitaMarket.SetupAccount(
+			t,
+			b,
+			userAddress,
+			userSigner,
+			contracts.NfinitaMarketAddress,
+			contracts.FungibleTokenAddress,
+			contracts.FUSDAddress,
+		)
 	})
 }
 
@@ -41,20 +51,25 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 			t, b,
 			contracts.NonFungibleTokenAddress,
 			contracts.MetaBearAddress,
-			contracts.MetaBearSigner,
-			typeID,
+			contracts.FungibleTokenAddress,
+			contracts.FUSDAddress,
+			userAddress,
+			userSigner,
 		)
 
+		/*
 		// contract transfers item to another seller account (we don't need to do this)
 		nft.TransferItem(
 			t, b,
 			contracts.NonFungibleTokenAddress,
-			contracts.MetaBearAddress,
-			contracts.MetaBearSigner,
+		    contracts.MetaBearAddress,
+			userAddress,
+			userSigner,
 			tokenToList,
 			userAddress,
 			false,
 		)
+		*/
 
 		// other seller account lists the item
 		nfinitaMarket.ListItem(
@@ -78,8 +93,10 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 			t, b,
 			contracts.NonFungibleTokenAddress,
 			contracts.MetaBearAddress,
-			contracts.MetaBearSigner,
-			typeID,
+			contracts.FungibleTokenAddress,
+			contracts.FUSDAddress,
+			userAddress,
+			userSigner,
 		)
 
 		// contract transfers item to another seller account (we don't need to do this)
@@ -87,7 +104,8 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 			t, b,
 			contracts.NonFungibleTokenAddress,
 			contracts.MetaBearAddress,
-			contracts.MetaBearSigner,
+			userAddress,
+			userSigner,
 			tokenToList,
 			userAddress,
 			false,
@@ -105,17 +123,27 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		)
 
 		buyerAddress, buyerSigner := nfinitaMarket.CreatePurchaserAccount(t, b, contracts)
-
-		// fund the purchase
-		fusd.Mint(
+		nft.SetupAccountMetaBear(
 			t, b,
-			contracts.FungibleTokenAddress,
-			contracts.FUSDAddress,
-			contracts.FUSDSigner,
 			buyerAddress,
-			"100.0",
-			false,
+			buyerSigner,
+			contracts.NonFungibleTokenAddress,
+			contracts.MetaBearAddress,
+		 )
+
+		supply := test.ExecuteScriptAndCheck(
+			t, b,
+			nfinitaMarket.ReadCollectionIdsScript(contracts),
+			[][]byte{jsoncdc.MustEncode(cadence.NewAddress(userAddress))},
 		)
+
+		print("Sale Offer Resource ID\n")
+		print(saleOfferResourceID)
+		print("\n")
+		print(contracts.MetaBearAddress.String())
+		print("\n")
+		print(supply.String())
+		print("\nSale Offer Resource ID END\n")
 
 		// Make the purchase
 		nfinitaMarket.PurchaseItem(
@@ -123,8 +151,9 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 			contracts,
 			buyerAddress,
 			buyerSigner,
-			userAddress,
 			saleOfferResourceID,
+			"0.0",
+			userAddress,
 			false,
 		)
 	})
@@ -134,13 +163,33 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		tokenPrice := "1.11"
 		userAddress, userSigner := nfinitaMarket.CreateAccount(t, b, contracts)
 
+		// fund the mint
+		fusd.SetupAccount(
+			t, b,
+			userAddress,
+			userSigner,
+			contracts.FungibleTokenAddress,
+			contracts.FUSDAddress,
+		)
+		fusd.Mint(
+			t, b,
+			contracts.FungibleTokenAddress,
+			contracts.FUSDAddress,
+			contracts.FUSDSigner,
+			userAddress,
+			"100.0",
+			false,
+		)
+
 		// contract mints item
 		nft.MintItem(
 			t, b,
 			contracts.NonFungibleTokenAddress,
 			contracts.MetaBearAddress,
-			contracts.MetaBearSigner,
-			typeID,
+			contracts.FungibleTokenAddress,
+			contracts.FUSDAddress,
+			userAddress,
+			userSigner,
 		)
 
 		// contract transfers item to another seller account (we don't need to do this)
@@ -148,7 +197,8 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 			t, b,
 			contracts.NonFungibleTokenAddress,
 			contracts.MetaBearAddress,
-			contracts.MetaBearSigner,
+			userAddress,
+			userSigner,
 			tokenToList,
 			userAddress,
 			false,

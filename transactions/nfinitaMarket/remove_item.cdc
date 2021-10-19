@@ -1,6 +1,6 @@
 import NfinitaMarket from "../../contracts/NfinitaMarket.cdc"
 
-transaction(itemID: UInt64) {
+transaction(collection: Address, itemID: UInt64) {
     let marketCollection: &NfinitaMarket.Collection
 
     prepare(signer: AuthAccount) {
@@ -9,7 +9,7 @@ transaction(itemID: UInt64) {
     }
 
     execute {
-        let offer <-self.marketCollection.remove(itemID: itemID)
+        let offer <-self.marketCollection.remove(collection: collection, itemID: itemID)
         destroy offer
     }
 }

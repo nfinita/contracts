@@ -33,11 +33,15 @@ var (
 	NonFungibleTokenAddressPlaceholder = regexp.MustCompile(`"[^"\s].*/NonFungibleToken.cdc"`)
 	MetaBearAddressPlaceHolder         = regexp.MustCompile(`"[^"\s].*/MetaBear.cdc"`)
 	NfinitaMarketPlaceholder           = regexp.MustCompile(`"[^"\s].*/NfinitaMarket.cdc"`)
+	MetadataPlaceholder                = regexp.MustCompile(`METADATA_PLACEHOLDER`)
+	PathNamePlaceholder                = regexp.MustCompile(`\${pathName}`)
 )
 
 // NewBlockchain returns a new emulated blockchain.
 func NewBlockchain() *emulator.Blockchain {
-	b, err := emulator.NewBlockchain()
+	b, err := emulator.NewBlockchain(
+		emulator.WithStorageLimitEnabled(false),
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -141,6 +145,16 @@ func ReplaceImports(
 			address = "0x" + address
 		}
 
+		code = find.ReplaceAllString(code, address)
+	}
+	return code
+}
+
+func ReplaceEnvs(
+	code string,
+	envReplacements map[string]*regexp.Regexp,
+) string {
+	for address, find := range envReplacements {
 		code = find.ReplaceAllString(code, address)
 	}
 	return code

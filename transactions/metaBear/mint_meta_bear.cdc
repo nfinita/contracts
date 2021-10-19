@@ -1,12 +1,18 @@
 import NonFungibleToken from "../../contracts/NonFungibleToken.cdc"
 import FungibleToken from "../../contracts/FungibleToken.cdc"
-import MetaBear from "../../contracts/MetaBar.cdc"
+import MetaBear from "../../contracts/MetaBear.cdc"
 import FUSD from "../../contracts/FUSD.cdc"
 
 // This transction uses the NFTMinter resource to mint a new NFT.
 //
 // It must be run with the account that has the minter resource
 // stored at path /storage/NFTMinter.
+
+pub fun hasCollection(_ address: Address): Bool {
+  return getAccount(address)
+    .getCapability<&MetaBear.Collection{NonFungibleToken.CollectionPublic, MetaBear.MetaBearCollectionPublic}>(MetaBear.CollectionPublicPath)
+    .check()
+}
 
 transaction(collection: Address) {
     // local variable for storing the minter reference
@@ -21,6 +27,15 @@ transaction(collection: Address) {
     var receiver: &{NonFungibleToken.CollectionPublic}
 
     prepare(signer: AuthAccount) {
+        // If signer does not have a MetaBear collection, create one
+        if !hasCollection(signer.address) {
+            if signer.borrow<&MetaBear.Collection>(from: MetaBear.CollectionStoragePath) == nil {
+                signer.save(<-MetaBear.createEmptyCollection(), to: MetaBear.CollectionStoragePath)
+            }
+            signer.unlink(MetaBear.CollectionPublicPath)
+            signer.link<&MetaBear.Collection{NonFungibleToken.CollectionPublic, MetaBear.MetaBearCollectionPublic}>(MetaBear.CollectionPublicPath, target: MetaBear.CollectionStoragePath)
+        }
+
         self.minter = getAccount(collection).getCapability<&MetaBear.NFTMinter>(MetaBear.MinterPublicPath).borrow()!
 
         // Get a reference to the signer's stored vault

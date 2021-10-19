@@ -2,6 +2,7 @@ package nfinitaMarket
 
 import (
 	"fmt"
+	"github.com/nfinita/first-market/cadence/tests/go/fusd"
 	"regexp"
 	"testing"
 
@@ -13,7 +14,6 @@ import (
 	sdktest "github.com/onflow/flow-go-sdk/test"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/nfinita/first-market/cadence/tests/go/fusd"
 	"github.com/nfinita/first-market/cadence/tests/go/nft"
 	"github.com/nfinita/first-market/cadence/tests/go/test"
 )
@@ -22,18 +22,22 @@ const (
 	nfinitaMarketContractPath = "../../contracts/NfinitaMarket.cdc"
 
 	nfinitaMarketTransactionRootPath = "../../transactions/nfinitaMarket"
-	nfinitaMarketSetupAccountPath    = nfinitaMarketTransactionRootPath + "/setup_account.cdc"
-	nfinitaMarketSellItemPath        = nfinitaMarketTransactionRootPath + "/sell_item_fusd.cdc"
-	nfinitaMarketBuyItemPath         = nfinitaMarketTransactionRootPath + "/buy_item_fusd.cdc"
-	nfinitaMarketRemoveItemPath      = nfinitaMarketTransactionRootPath + "/remove_item.cdc"
+	nfinitaMarketScriptsRootPath     = "../../scripts/nfinitaMarket"
+
+	nfinitaMarketSetupAccountPath  = nfinitaMarketTransactionRootPath + "/setup_account.cdc"
+	nfinitaMarketSellItemPath      = nfinitaMarketTransactionRootPath + "/sell_item_fusd.cdc"
+	nfinitaMarketBuyItemPath       = nfinitaMarketTransactionRootPath + "/buy_item_fusd.cdc"
+	nfinitaMarketRemoveItemPath    = nfinitaMarketTransactionRootPath + "/remove_item.cdc"
+
+	nfinitaMarketReadCollectionIdsPath = nfinitaMarketScriptsRootPath + "/read_collection_ids.cdc"
 )
 
 func DeployContracts(t *testing.T, b *emulator.Blockchain) test.Contracts {
-	accountKeys := sdktest.AccountKeyGenerator()
-
 	//fungibleTokenAddress, fusdAddress, fusdSigner := fusd.DeployContracts(t, b)
 	fungibleTokenAddress, fusdAddress, nonFungibleTokenAddress, metaBearAddress, fusdSigner, metaBearSigner :=
 		nft.DeployContracts(t, b)
+
+	accountKeys := sdktest.AccountKeyGenerator()
 
 	// Should be able to deploy a contract as a new account with one key.
 	nfinitaMarketAccountKey, nfinitaMarketSigner := accountKeys.NewWithSigner()
@@ -58,11 +62,7 @@ func DeployContracts(t *testing.T, b *emulator.Blockchain) test.Contracts {
 	_, err = b.CommitBlock()
 	assert.NoError(t, err)
 
-	// simplify the workflow by having contract addresses also be our initial test storefronts
-	nft.SetupAccount(t, b, metaBearAddress, metaBearSigner, nonFungibleTokenAddress, metaBearAddress)
-	SetupAccount(t, b, nfinitaMarketAddress, nfinitaMarketSigner, nfinitaMarketAddress)
-
-	return test.Contracts{
+	contracts := test.Contracts{
 		FungibleTokenAddress:    fungibleTokenAddress,
 		FUSDAddress:             fusdAddress,
 		FUSDSigner:              fusdSigner,
@@ -72,6 +72,33 @@ func DeployContracts(t *testing.T, b *emulator.Blockchain) test.Contracts {
 		NfinitaMarketAddress:    nfinitaMarketAddress,
 		NfinitaMarketSigner:     nfinitaMarketSigner,
 	}
+
+	// simplify the workflow by having contract addresses also be our initial test storefronts
+	nft.SetupAccount(t, b, metaBearAddress, metaBearSigner, nonFungibleTokenAddress, metaBearAddress)
+
+	communityAddress, _ := CreateAccount(t, b, contracts)
+	creatorAddress, _ := CreateAccount(t, b, contracts)
+
+	nft.SetMetaBearSettings(
+		t,
+		b,
+		contracts.NonFungibleTokenAddress,
+		metaBearAddress,
+		metaBearSigner,
+		communityAddress,
+		"0.03",
+		creatorAddress,
+		"0.08",
+		"0.02",
+		nfinitaMarketAddress,
+		"0.05",
+		"0.025",
+		false,
+	)
+
+	SetupAccount(t, b, nfinitaMarketAddress, nfinitaMarketSigner, nfinitaMarketAddress, fungibleTokenAddress, fusdAddress)
+
+	return contracts
 }
 
 func SetupAccount(
@@ -80,9 +107,15 @@ func SetupAccount(
 	userAddress flow.Address,
 	userSigner crypto.Signer,
 	nfinitaMarketAddr flow.Address,
+	ftAddr flow.Address,
+	fusdAddr flow.Address,
 ) {
 	tx := flow.NewTransaction().
-		SetScript(nfinitaMarketGenerateSetupAccountScript(nfinitaMarketAddr.String())).
+		SetScript(nfinitaMarketGenerateSetupAccountScript(
+			nfinitaMarketAddr.String(),
+			ftAddr.String(),
+			fusdAddr.String(),
+		)).
 		SetGasLimit(100).
 		SetProposalKey(b.ServiceKey().Address, b.ServiceKey().Index, b.ServiceKey().SequenceNumber).
 		SetPayer(b.ServiceKey().Address).
@@ -104,7 +137,16 @@ func CreatePurchaserAccount(
 ) (flow.Address, crypto.Signer) {
 	userAddress, userSigner, _ := test.CreateAccount(t, b)
 	fusd.SetupAccount(t, b, userAddress, userSigner, contracts.FungibleTokenAddress, contracts.FUSDAddress)
-	nft.SetupAccount(t, b, userAddress, userSigner, contracts.NonFungibleTokenAddress, contracts.MetaBearAddress)
+	fusd.Mint(
+		t, b,
+		contracts.FungibleTokenAddress,
+		contracts.FUSDAddress,
+		contracts.FUSDSigner,
+		userAddress,
+		"100.0",
+		false,
+	)
+	// nft.SetupAccount(t, b, userAddress, userSigner, contracts.NonFungibleTokenAddress, contracts.MetaBearAddress)
 	return userAddress, userSigner
 }
 
@@ -114,7 +156,15 @@ func CreateAccount(
 	contracts test.Contracts,
 ) (flow.Address, crypto.Signer) {
 	userAddress, userSigner := CreatePurchaserAccount(t, b, contracts)
-	SetupAccount(t, b, userAddress, userSigner, contracts.NfinitaMarketAddress)
+	SetupAccount(
+		t,
+		b,
+		userAddress,
+		userSigner,
+		contracts.NfinitaMarketAddress,
+		contracts.FungibleTokenAddress,
+		contracts.FUSDAddress,
+	)
 	return userAddress, userSigner
 }
 
@@ -130,13 +180,18 @@ func ListItem(
 ) (saleOfferResourceID uint64) {
 	tx := flow.NewTransaction().
 		SetScript(nfinitaMarketGenerateSellItemScript(contracts)).
-		SetGasLimit(100).
+		SetGasLimit(1000).
 		SetProposalKey(b.ServiceKey().Address, b.ServiceKey().Index, b.ServiceKey().SequenceNumber).
 		SetPayer(b.ServiceKey().Address).
 		AddAuthorizer(userAddress)
 
 	_ = tx.AddArgument(cadence.NewUInt64(tokenID))
 	_ = tx.AddArgument(test.CadenceUFix64(price))
+	_ = tx.AddArgument(cadence.NewOptional(nil))
+	_ = tx.AddArgument(test.CadenceUFix64("0.0"))
+	_ = tx.AddArgument(test.CadenceUFix64("0.0"))
+	_ = tx.AddArgument(cadence.NewUInt64(0))
+	_ = tx.AddArgument(cadence.NewAddress(contracts.MetaBearAddress))
 
 	result := test.SignAndSubmit(
 		t, b, tx,
@@ -146,13 +201,20 @@ func ListItem(
 	)
 
 	saleOfferAvailableEventType := fmt.Sprintf(
-		"A.%s.NfinitaMarket.SaleOfferAvailable",
+		"A.%s.NfinitaMarket.SaleOfferCreated",
 		contracts.NfinitaMarketAddress,
 	)
 
 	for _, event := range result.Events {
 		if event.Type == saleOfferAvailableEventType {
-			return event.Value.Fields[1].ToGoValue().(uint64)
+			print("EVENT VALUES ====\n")
+			print(event.Value.Fields[0].String())
+			print("\n")
+			print(event.Value.Fields[1].String())
+			print("\n")
+			print(event.Value.Fields[2].String())
+			print("\nEVENT VALUES END ====\n")
+			return event.Value.Fields[0].ToGoValue().(uint64)
 		}
 	}
 
@@ -165,19 +227,22 @@ func PurchaseItem(
 	contracts test.Contracts,
 	userAddress flow.Address,
 	userSigner crypto.Signer,
-	storefrontAddress flow.Address,
-	tokenID uint64,
+	itemID uint64,
+	donation string,
+	marketAddress flow.Address,
 	shouldFail bool,
 ) {
 	tx := flow.NewTransaction().
 		SetScript(nfinitaMarketGenerateBuyItemScript(contracts)).
-		SetGasLimit(200).
+		SetGasLimit(300).
 		SetProposalKey(b.ServiceKey().Address, b.ServiceKey().Index, b.ServiceKey().SequenceNumber).
 		SetPayer(b.ServiceKey().Address).
 		AddAuthorizer(userAddress)
 
-	_ = tx.AddArgument(cadence.NewUInt64(tokenID))
-	_ = tx.AddArgument(cadence.NewAddress(storefrontAddress))
+	_ = tx.AddArgument(cadence.NewAddress(contracts.MetaBearAddress))
+	_ = tx.AddArgument(cadence.NewUInt64(itemID))
+	_ = tx.AddArgument(test.CadenceUFix64(donation))
+	_ = tx.AddArgument(cadence.NewAddress(marketAddress))
 
 	test.SignAndSubmit(
 		t, b, tx,
@@ -203,6 +268,7 @@ func RemoveItem(
 		SetPayer(b.ServiceKey().Address).
 		AddAuthorizer(userAddress)
 
+	_ = tx.AddArgument(cadence.NewAddress(contracts.MetaBearAddress))
 	_ = tx.AddArgument(cadence.NewUInt64(tokenID))
 
 	test.SignAndSubmit(
@@ -214,7 +280,7 @@ func RemoveItem(
 }
 
 func replaceAddressPlaceholders(codeBytes []byte, contracts test.Contracts) []byte {
-	return []byte(test.ReplaceImports(
+	return []byte(test.ReplaceEnvs(test.ReplaceImports(
 		string(codeBytes),
 		map[string]*regexp.Regexp{
 			contracts.FungibleTokenAddress.String():    test.FungibleTokenAddressPlaceholder,
@@ -223,7 +289,9 @@ func replaceAddressPlaceholders(codeBytes []byte, contracts test.Contracts) []by
 			contracts.MetaBearAddress.String():         test.MetaBearAddressPlaceHolder,
 			contracts.NfinitaMarketAddress.String():    test.NfinitaMarketPlaceholder,
 		},
-	))
+	), map[string]*regexp.Regexp{
+		"MetaBearCollection004": test.PathNamePlaceholder,
+	}))
 }
 
 func loadNfinitaMarket(
@@ -243,11 +311,13 @@ func loadNfinitaMarket(
 	)
 }
 
-func nfinitaMarketGenerateSetupAccountScript(nfinitaMarketAddr string) []byte {
+func nfinitaMarketGenerateSetupAccountScript(nfinitaMarketAddr, ftAddress, fusdAddress string) []byte {
 	return []byte(test.ReplaceImports(
 		string(test.ReadFile(nfinitaMarketSetupAccountPath)),
 		map[string]*regexp.Regexp{
 			nfinitaMarketAddr: test.NfinitaMarketPlaceholder,
+			ftAddress:         test.FungibleTokenAddressPlaceholder,
+			fusdAddress:       test.FUSDAddressPlaceHolder,
 		},
 	))
 }
@@ -269,6 +339,13 @@ func nfinitaMarketGenerateBuyItemScript(contracts test.Contracts) []byte {
 func nfinitaMarketGenerateRemoveItemScript(contracts test.Contracts) []byte {
 	return replaceAddressPlaceholders(
 		test.ReadFile(nfinitaMarketRemoveItemPath),
+		contracts,
+	)
+}
+
+func ReadCollectionIdsScript(contracts test.Contracts) []byte {
+	return replaceAddressPlaceholders(
+		test.ReadFile(nfinitaMarketReadCollectionIdsPath),
 		contracts,
 	)
 }
