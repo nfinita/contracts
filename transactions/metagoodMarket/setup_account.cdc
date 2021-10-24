@@ -1,4 +1,4 @@
-import NfinitaMarket from "../../contracts/NfinitaMarket.cdc"
+import MetagoodMarket from "../../contracts/MetagoodMarket.cdc"
 import FungibleToken from "../../contracts/FungibleToken.cdc"
 import FUSD from "../../contracts/FUSD.cdc"
 
@@ -8,16 +8,16 @@ transaction {
     prepare(signer: AuthAccount) {
 
         // if the account doesn't already have a collection
-        if signer.borrow<&NfinitaMarket.Collection>(from: NfinitaMarket.CollectionStoragePath) == nil {
+        if signer.borrow<&MetagoodMarket.Collection>(from: MetagoodMarket.CollectionStoragePath) == nil {
 
             // create a new empty collection
-            let collection <- NfinitaMarket.createEmptyCollection() as! @NfinitaMarket.Collection
+            let collection <- MetagoodMarket.createEmptyCollection() as! @MetagoodMarket.Collection
 
             // save it to the account
-            signer.save(<-collection, to: NfinitaMarket.CollectionStoragePath)
+            signer.save(<-collection, to: MetagoodMarket.CollectionStoragePath)
 
             // create a public capability for the collection
-            signer.link<&NfinitaMarket.Collection{NfinitaMarket.CollectionPublic}>(NfinitaMarket.CollectionPublicPath, target: NfinitaMarket.CollectionStoragePath)
+            signer.link<&MetagoodMarket.Collection{MetagoodMarket.CollectionPublic}>(MetagoodMarket.CollectionPublicPath, target: MetagoodMarket.CollectionStoragePath)
         }
 
         // It's OK if the account already has a Vault, but we don't want to replace it

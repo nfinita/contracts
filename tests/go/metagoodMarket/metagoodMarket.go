@@ -1,4 +1,4 @@
-package nfinitaMarket
+package metagoodMarket
 
 import (
 	"fmt"
@@ -19,17 +19,17 @@ import (
 )
 
 const (
-	nfinitaMarketContractPath = "../../contracts/NfinitaMarket.cdc"
+	metagoodMarketContractPath = "../../contracts/MetagoodMarket.cdc"
 
-	nfinitaMarketTransactionRootPath = "../../transactions/nfinitaMarket"
-	nfinitaMarketScriptsRootPath     = "../../scripts/nfinitaMarket"
+	metagoodMarketTransactionRootPath = "../../transactions/metagoodMarket"
+	metagoodMarketScriptsRootPath     = "../../scripts/metagoodMarket"
 
-	nfinitaMarketSetupAccountPath  = nfinitaMarketTransactionRootPath + "/setup_account.cdc"
-	nfinitaMarketSellItemPath      = nfinitaMarketTransactionRootPath + "/sell_item_fusd.cdc"
-	nfinitaMarketBuyItemPath       = nfinitaMarketTransactionRootPath + "/buy_item_fusd.cdc"
-	nfinitaMarketRemoveItemPath    = nfinitaMarketTransactionRootPath + "/remove_item.cdc"
+	metagoodMarketSetupAccountPath = metagoodMarketTransactionRootPath + "/setup_account.cdc"
+	metagoodMarketSellItemPath     = metagoodMarketTransactionRootPath + "/sell_item_fusd.cdc"
+	metagoodMarketBuyItemPath      = metagoodMarketTransactionRootPath + "/buy_item_fusd.cdc"
+	metagoodMarketRemoveItemPath   = metagoodMarketTransactionRootPath + "/remove_item.cdc"
 
-	nfinitaMarketReadCollectionIdsPath = nfinitaMarketScriptsRootPath + "/read_collection_ids.cdc"
+	metagoodMarketReadCollectionIdsPath = metagoodMarketScriptsRootPath + "/read_collection_ids.cdc"
 )
 
 func DeployContracts(t *testing.T, b *emulator.Blockchain) test.Contracts {
@@ -40,20 +40,20 @@ func DeployContracts(t *testing.T, b *emulator.Blockchain) test.Contracts {
 	accountKeys := sdktest.AccountKeyGenerator()
 
 	// Should be able to deploy a contract as a new account with one key.
-	nfinitaMarketAccountKey, nfinitaMarketSigner := accountKeys.NewWithSigner()
-	nfinitaMarketCode := loadNfinitaMarket(
+	metagoodMarketAccountKey, metagoodMarketSigner := accountKeys.NewWithSigner()
+	metagoodMarketCode := loadMetagoodMarket(
 		fungibleTokenAddress,
 		nonFungibleTokenAddress,
 		fusdAddress,
 		metaBearAddress,
 	)
 
-	nfinitaMarketAddress, err := b.CreateAccount(
-		[]*flow.AccountKey{nfinitaMarketAccountKey},
+	metagoodMarketAddress, err := b.CreateAccount(
+		[]*flow.AccountKey{metagoodMarketAccountKey},
 		[]sdktemplates.Contract{
 			{
-				Name:   "NfinitaMarket",
-				Source: string(nfinitaMarketCode),
+				Name:   "MetagoodMarket",
+				Source: string(metagoodMarketCode),
 			},
 		},
 	)
@@ -69,8 +69,8 @@ func DeployContracts(t *testing.T, b *emulator.Blockchain) test.Contracts {
 		NonFungibleTokenAddress: nonFungibleTokenAddress,
 		MetaBearAddress:         metaBearAddress,
 		MetaBearSigner:          metaBearSigner,
-		NfinitaMarketAddress:    nfinitaMarketAddress,
-		NfinitaMarketSigner:     nfinitaMarketSigner,
+		MetagoodMarketAddress:   metagoodMarketAddress,
+		MetagoodMarketSigner:    metagoodMarketSigner,
 	}
 
 	// simplify the workflow by having contract addresses also be our initial test storefronts
@@ -90,13 +90,13 @@ func DeployContracts(t *testing.T, b *emulator.Blockchain) test.Contracts {
 		creatorAddress,
 		"0.08",
 		"0.02",
-		nfinitaMarketAddress,
+		metagoodMarketAddress,
 		"0.05",
 		"0.025",
 		false,
 	)
 
-	SetupAccount(t, b, nfinitaMarketAddress, nfinitaMarketSigner, nfinitaMarketAddress, fungibleTokenAddress, fusdAddress)
+	SetupAccount(t, b, metagoodMarketAddress, metagoodMarketSigner, metagoodMarketAddress, fungibleTokenAddress, fusdAddress)
 
 	return contracts
 }
@@ -106,13 +106,13 @@ func SetupAccount(
 	b *emulator.Blockchain,
 	userAddress flow.Address,
 	userSigner crypto.Signer,
-	nfinitaMarketAddr flow.Address,
+	metagoodMarketAddr flow.Address,
 	ftAddr flow.Address,
 	fusdAddr flow.Address,
 ) {
 	tx := flow.NewTransaction().
-		SetScript(nfinitaMarketGenerateSetupAccountScript(
-			nfinitaMarketAddr.String(),
+		SetScript(metagoodMarketGenerateSetupAccountScript(
+			metagoodMarketAddr.String(),
 			ftAddr.String(),
 			fusdAddr.String(),
 		)).
@@ -129,7 +129,7 @@ func SetupAccount(
 	)
 }
 
-// Create a new account with the FUSD and MetaBear resources set up BUT no NfinitaMarket resource.
+// Create a new account with the FUSD and MetaBear resources set up BUT no MetagoodMarket resource.
 func CreatePurchaserAccount(
 	t *testing.T,
 	b *emulator.Blockchain,
@@ -161,7 +161,7 @@ func CreateAccount(
 		b,
 		userAddress,
 		userSigner,
-		contracts.NfinitaMarketAddress,
+		contracts.MetagoodMarketAddress,
 		contracts.FungibleTokenAddress,
 		contracts.FUSDAddress,
 	)
@@ -179,7 +179,7 @@ func ListItem(
 	shouldFail bool,
 ) (saleOfferResourceID uint64) {
 	tx := flow.NewTransaction().
-		SetScript(nfinitaMarketGenerateSellItemScript(contracts)).
+		SetScript(metagoodMarketGenerateSellItemScript(contracts)).
 		SetGasLimit(1000).
 		SetProposalKey(b.ServiceKey().Address, b.ServiceKey().Index, b.ServiceKey().SequenceNumber).
 		SetPayer(b.ServiceKey().Address).
@@ -201,8 +201,8 @@ func ListItem(
 	)
 
 	saleOfferAvailableEventType := fmt.Sprintf(
-		"A.%s.NfinitaMarket.SaleOfferCreated",
-		contracts.NfinitaMarketAddress,
+		"A.%s.MetagoodMarket.SaleOfferCreated",
+		contracts.MetagoodMarketAddress,
 	)
 
 	for _, event := range result.Events {
@@ -233,7 +233,7 @@ func PurchaseItem(
 	shouldFail bool,
 ) {
 	tx := flow.NewTransaction().
-		SetScript(nfinitaMarketGenerateBuyItemScript(contracts)).
+		SetScript(metagoodMarketGenerateBuyItemScript(contracts)).
 		SetGasLimit(300).
 		SetProposalKey(b.ServiceKey().Address, b.ServiceKey().Index, b.ServiceKey().SequenceNumber).
 		SetPayer(b.ServiceKey().Address).
@@ -262,7 +262,7 @@ func RemoveItem(
 	shouldFail bool,
 ) {
 	tx := flow.NewTransaction().
-		SetScript(nfinitaMarketGenerateRemoveItemScript(contracts)).
+		SetScript(metagoodMarketGenerateRemoveItemScript(contracts)).
 		SetGasLimit(100).
 		SetProposalKey(b.ServiceKey().Address, b.ServiceKey().Index, b.ServiceKey().SequenceNumber).
 		SetPayer(b.ServiceKey().Address).
@@ -287,21 +287,21 @@ func replaceAddressPlaceholders(codeBytes []byte, contracts test.Contracts) []by
 			contracts.FUSDAddress.String():             test.FUSDAddressPlaceHolder,
 			contracts.NonFungibleTokenAddress.String(): test.NonFungibleTokenAddressPlaceholder,
 			contracts.MetaBearAddress.String():         test.MetaBearAddressPlaceHolder,
-			contracts.NfinitaMarketAddress.String():    test.NfinitaMarketPlaceholder,
+			contracts.MetagoodMarketAddress.String():   test.MetagoodMarketPlaceholder,
 		},
 	), map[string]*regexp.Regexp{
 		"MetaBearCollection004": test.PathNamePlaceholder,
 	}))
 }
 
-func loadNfinitaMarket(
+func loadMetagoodMarket(
 	fungibleTokenAddress,
 	nonFungibleTokenAddress,
 	fusdAddress,
 	metaBearAddress flow.Address,
 ) []byte {
 	return replaceAddressPlaceholders(
-		test.ReadFile(nfinitaMarketContractPath),
+		test.ReadFile(metagoodMarketContractPath),
 		test.Contracts{
 			FungibleTokenAddress:    fungibleTokenAddress,
 			FUSDAddress:             fusdAddress,
@@ -311,41 +311,41 @@ func loadNfinitaMarket(
 	)
 }
 
-func nfinitaMarketGenerateSetupAccountScript(nfinitaMarketAddr, ftAddress, fusdAddress string) []byte {
+func metagoodMarketGenerateSetupAccountScript(metagoodMarketAddr, ftAddress, fusdAddress string) []byte {
 	return []byte(test.ReplaceImports(
-		string(test.ReadFile(nfinitaMarketSetupAccountPath)),
+		string(test.ReadFile(metagoodMarketSetupAccountPath)),
 		map[string]*regexp.Regexp{
-			nfinitaMarketAddr: test.NfinitaMarketPlaceholder,
-			ftAddress:         test.FungibleTokenAddressPlaceholder,
-			fusdAddress:       test.FUSDAddressPlaceHolder,
+			metagoodMarketAddr: test.MetagoodMarketPlaceholder,
+			ftAddress:          test.FungibleTokenAddressPlaceholder,
+			fusdAddress:        test.FUSDAddressPlaceHolder,
 		},
 	))
 }
 
-func nfinitaMarketGenerateSellItemScript(contracts test.Contracts) []byte {
+func metagoodMarketGenerateSellItemScript(contracts test.Contracts) []byte {
 	return replaceAddressPlaceholders(
-		test.ReadFile(nfinitaMarketSellItemPath),
+		test.ReadFile(metagoodMarketSellItemPath),
 		contracts,
 	)
 }
 
-func nfinitaMarketGenerateBuyItemScript(contracts test.Contracts) []byte {
+func metagoodMarketGenerateBuyItemScript(contracts test.Contracts) []byte {
 	return replaceAddressPlaceholders(
-		test.ReadFile(nfinitaMarketBuyItemPath),
+		test.ReadFile(metagoodMarketBuyItemPath),
 		contracts,
 	)
 }
 
-func nfinitaMarketGenerateRemoveItemScript(contracts test.Contracts) []byte {
+func metagoodMarketGenerateRemoveItemScript(contracts test.Contracts) []byte {
 	return replaceAddressPlaceholders(
-		test.ReadFile(nfinitaMarketRemoveItemPath),
+		test.ReadFile(metagoodMarketRemoveItemPath),
 		contracts,
 	)
 }
 
 func ReadCollectionIdsScript(contracts test.Contracts) []byte {
 	return replaceAddressPlaceholders(
-		test.ReadFile(nfinitaMarketReadCollectionIdsPath),
+		test.ReadFile(metagoodMarketReadCollectionIdsPath),
 		contracts,
 	)
 }

@@ -1,12 +1,12 @@
 import FungibleToken from "../../contracts/FungibleToken.cdc"
 import NonFungibleToken from "../../contracts/NonFungibleToken.cdc"
 import FUSD from "../../contracts/FUSD.cdc"
-import NfinitaMarket from "../../contracts/NfinitaMarket.cdc"
+import MetagoodMarket from "../../contracts/MetagoodMarket.cdc"
 
 transaction(itemID: UInt64, price: UFix64, charity: Address?, charityPercentage: UFix64, donationAmount: UFix64, expiryDate: UInt64, collection: Address) {
     let fusdVault: Capability<&{FungibleToken.Receiver}>
     let collectionCap: Capability<&{NonFungibleToken.Provider, NonFungibleToken.CollectionPublic}>
-    let marketCollection: &NfinitaMarket.Collection
+    let marketCollection: &MetagoodMarket.Collection
 
     prepare(signer: AuthAccount) {
         // We need a provider capability, but one is not provided by default so we create one if needed.
@@ -31,25 +31,25 @@ transaction(itemID: UInt64, price: UFix64, charity: Address?, charityPercentage:
 
         // --- Access to Collection Permissions End ---
 
-        // --- Init NfinitaMarket Start ---
+        // --- Init MetagoodMarket Start ---
 
-        if !signer.getCapability<&NfinitaMarket.Collection{NfinitaMarket.CollectionPublic}>(NfinitaMarket.CollectionPublicPath)!.check() {
-          if signer.borrow<&NfinitaMarket.Collection>(from: NfinitaMarket.CollectionStoragePath) == nil {
-            signer.save(<-NfinitaMarket.createEmptyCollection(), to: NfinitaMarket.CollectionStoragePath)
+        if !signer.getCapability<&MetagoodMarket.Collection{MetagoodMarket.CollectionPublic}>(MetagoodMarket.CollectionPublicPath)!.check() {
+          if signer.borrow<&MetagoodMarket.Collection>(from: MetagoodMarket.CollectionStoragePath) == nil {
+            signer.save(<-MetagoodMarket.createEmptyCollection(), to: MetagoodMarket.CollectionStoragePath)
           }
-          signer.unlink(NfinitaMarket.CollectionPublicPath)
-          signer.link<&NfinitaMarket.Collection{NfinitaMarket.CollectionPublic}>(NfinitaMarket.CollectionPublicPath, target: NfinitaMarket.CollectionStoragePath)
+          signer.unlink(MetagoodMarket.CollectionPublicPath)
+          signer.link<&MetagoodMarket.Collection{MetagoodMarket.CollectionPublic}>(MetagoodMarket.CollectionPublicPath, target: MetagoodMarket.CollectionStoragePath)
         }
 
-        // --- Init NfinitaMarket End ---
+        // --- Init MetagoodMarket End ---
 
-        self.marketCollection = signer.borrow<&NfinitaMarket.Collection>(from: NfinitaMarket.CollectionStoragePath)
-            ?? panic("Missing or mis-typed NfinitaMarket Collection")
+        self.marketCollection = signer.borrow<&MetagoodMarket.Collection>(from: MetagoodMarket.CollectionStoragePath)
+            ?? panic("Missing or mis-typed MetagoodMarket Collection")
     }
 
     execute {
         let bidVault <- FUSD.createEmptyVault()
-        let offer <- NfinitaMarket.createSaleOffer (
+        let offer <- MetagoodMarket.createSaleOffer (
             sellerItemProvider: self.collectionCap,
             collectionPublicPath: /public/${pathName},
             collection: collection,

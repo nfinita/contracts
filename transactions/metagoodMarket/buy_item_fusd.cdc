@@ -1,6 +1,6 @@
 import FungibleToken from "../../contracts/FungibleToken.cdc"
 import NonFungibleToken from "../../contracts/NonFungibleToken.cdc"
-import NfinitaMarket from "../../contracts/NfinitaMarket.cdc"
+import MetagoodMarket from "../../contracts/MetagoodMarket.cdc"
 import FUSD from "../../contracts/FUSD.cdc"
 
 transaction(collection: Address, itemID: UInt64, donation: UFix64, marketCollectionAddress: Address) {
@@ -10,11 +10,11 @@ transaction(collection: Address, itemID: UInt64, donation: UFix64, marketCollect
     let creatorFeeVault: @FungibleToken.Vault
     let communityFeeVault: @FungibleToken.Vault
     let collection: &{NonFungibleToken.Receiver}
-    let marketCollection: &NfinitaMarket.Collection{NfinitaMarket.CollectionPublic}
+    let marketCollection: &MetagoodMarket.Collection{MetagoodMarket.CollectionPublic}
 
     prepare(acct: AuthAccount) {
         self.marketCollection = getAccount(marketCollectionAddress)
-            .getCapability<&NfinitaMarket.Collection{NfinitaMarket.CollectionPublic}>(NfinitaMarket.CollectionPublicPath)
+            .getCapability<&MetagoodMarket.Collection{MetagoodMarket.CollectionPublic}>(MetagoodMarket.CollectionPublicPath)
             .borrow() ?? panic("Could not borrow market collection from market address")
 
         let saleItem = self.marketCollection.borrowSaleItem(collection: collection, itemID: itemID)!

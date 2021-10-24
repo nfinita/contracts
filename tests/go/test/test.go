@@ -23,8 +23,8 @@ type Contracts struct {
 	NonFungibleTokenAddress flow.Address
 	MetaBearAddress         flow.Address
 	MetaBearSigner          crypto.Signer
-	NfinitaMarketAddress    flow.Address
-	NfinitaMarketSigner     crypto.Signer
+	MetagoodMarketAddress    flow.Address
+	MetagoodMarketSigner     crypto.Signer
 }
 
 var (
@@ -32,7 +32,7 @@ var (
 	FUSDAddressPlaceHolder             = regexp.MustCompile(`"[^"\s].*/FUSD.cdc"`)
 	NonFungibleTokenAddressPlaceholder = regexp.MustCompile(`"[^"\s].*/NonFungibleToken.cdc"`)
 	MetaBearAddressPlaceHolder         = regexp.MustCompile(`"[^"\s].*/MetaBear.cdc"`)
-	NfinitaMarketPlaceholder           = regexp.MustCompile(`"[^"\s].*/NfinitaMarket.cdc"`)
+	MetagoodMarketPlaceholder           = regexp.MustCompile(`"[^"\s].*/MetagoodMarket.cdc"`)
 	MetadataPlaceholder                = regexp.MustCompile(`METADATA_PLACEHOLDER`)
 	PathNamePlaceholder                = regexp.MustCompile(`\${pathName}`)
 )

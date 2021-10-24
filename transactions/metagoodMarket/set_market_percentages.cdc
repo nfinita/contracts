@@ -1,4 +1,4 @@
-import NfinitaMarket from "../../contracts/NfinitaMarket.cdc"
+import MetagoodMarket from "../../contracts/MetagoodMarket.cdc"
 
 // This transaction configures an account to hold SaleOffer items.
 
@@ -9,11 +9,11 @@ transaction(
     collectionCreatorFee2ndBip: UInt64,
     collectionCommunityFee2ndBip: UInt64,
 ) {
-      let marketSettings: &NfinitaMarket.MarketSettings
+      let marketSettings: &MetagoodMarket.MarketSettings
 
       prepare(signer: AuthAccount) {
-        self.marketSettings = signer.borrow<&NfinitaMarket.MarketSettings>(
-            from: NfinitaMarket.MarketSettingsStoragePath
+        self.marketSettings = signer.borrow<&MetagoodMarket.MarketSettings>(
+            from: MetagoodMarket.MarketSettingsStoragePath
         ) ?? panic("Unable to borrow Market Settings")
       }
 

@@ -6,45 +6,45 @@ import (
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"testing"
 
-	"github.com/nfinita/first-market/cadence/tests/go/nfinitaMarket"
+	"github.com/nfinita/first-market/cadence/tests/go/metagoodMarket"
 	"github.com/nfinita/first-market/cadence/tests/go/nft"
 	"github.com/nfinita/first-market/cadence/tests/go/test"
 )
 
-func TestNfinitaMarketDeployContracts(t *testing.T) {
+func TestMetagoodMarketDeployContracts(t *testing.T) {
 	b := test.NewBlockchain()
 
-	nfinitaMarket.DeployContracts(t, b)
+	metagoodMarket.DeployContracts(t, b)
 }
 
-func TestNfinitaMarketSetupAccount(t *testing.T) {
+func TestMetagoodMarketSetupAccount(t *testing.T) {
 	b := test.NewBlockchain()
 
-	contracts := nfinitaMarket.DeployContracts(t, b)
+	contracts := metagoodMarket.DeployContracts(t, b)
 
 	t.Run("Should be able to create an empty Storefront", func(t *testing.T) {
 		userAddress, userSigner, _ := test.CreateAccount(t, b)
-		nfinitaMarket.SetupAccount(
+		metagoodMarket.SetupAccount(
 			t,
 			b,
 			userAddress,
 			userSigner,
-			contracts.NfinitaMarketAddress,
+			contracts.MetagoodMarketAddress,
 			contracts.FungibleTokenAddress,
 			contracts.FUSDAddress,
 		)
 	})
 }
 
-func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
+func TestMetagooMetagoodrketCreateSaleOffer(t *testing.T) {
 	b := test.NewBlockchain()
 
-	contracts := nfinitaMarket.DeployContracts(t, b)
+	contracts := metagoodMarket.DeployContracts(t, b)
 
 	t.Run("Should be able to create a sale offer and list it", func(t *testing.T) {
 		tokenToList := uint64(0)
 		tokenPrice := "1.11"
-		userAddress, userSigner := nfinitaMarket.CreateAccount(t, b, contracts)
+		userAddress, userSigner := metagoodMarket.CreateAccount(t, b, contracts)
 
 		// contract mints item
 		nft.MintItem(
@@ -72,7 +72,7 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		*/
 
 		// other seller account lists the item
-		nfinitaMarket.ListItem(
+		metagoodMarket.ListItem(
 			t, b,
 			contracts,
 			userAddress,
@@ -86,7 +86,7 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 	t.Run("Should be able to accept a sale offer", func(t *testing.T) {
 		tokenToList := uint64(1)
 		tokenPrice := "1.11"
-		userAddress, userSigner := nfinitaMarket.CreateAccount(t, b, contracts)
+		userAddress, userSigner := metagoodMarket.CreateAccount(t, b, contracts)
 
 		// contract mints item
 		nft.MintItem(
@@ -112,7 +112,7 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		)
 
 		// other seller account lists the item
-		saleOfferResourceID := nfinitaMarket.ListItem(
+		saleOfferResourceID := metagoodMarket.ListItem(
 			t, b,
 			contracts,
 			userAddress,
@@ -122,7 +122,7 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 			false,
 		)
 
-		buyerAddress, buyerSigner := nfinitaMarket.CreatePurchaserAccount(t, b, contracts)
+		buyerAddress, buyerSigner := metagoodMarket.CreatePurchaserAccount(t, b, contracts)
 		nft.SetupAccountMetaBear(
 			t, b,
 			buyerAddress,
@@ -133,7 +133,7 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 
 		supply := test.ExecuteScriptAndCheck(
 			t, b,
-			nfinitaMarket.ReadCollectionIdsScript(contracts),
+			metagoodMarket.ReadCollectionIdsScript(contracts),
 			[][]byte{jsoncdc.MustEncode(cadence.NewAddress(userAddress))},
 		)
 
@@ -146,7 +146,7 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		print("\nSale Offer Resource ID END\n")
 
 		// Make the purchase
-		nfinitaMarket.PurchaseItem(
+		metagoodMarket.PurchaseItem(
 			t, b,
 			contracts,
 			buyerAddress,
@@ -161,7 +161,7 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 	t.Run("Should be able to remove a sale offer", func(t *testing.T) {
 		tokenToList := uint64(2)
 		tokenPrice := "1.11"
-		userAddress, userSigner := nfinitaMarket.CreateAccount(t, b, contracts)
+		userAddress, userSigner := metagoodMarket.CreateAccount(t, b, contracts)
 
 		// fund the mint
 		fusd.SetupAccount(
@@ -205,7 +205,7 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		)
 
 		// other seller account lists the item
-		saleOfferResourceID := nfinitaMarket.ListItem(
+		saleOfferResourceID := metagoodMarket.ListItem(
 			t, b,
 			contracts,
 			userAddress,
@@ -216,7 +216,7 @@ func TestNfinitaMarketCreateSaleOffer(t *testing.T) {
 		)
 
 		// make the purchase
-		nfinitaMarket.RemoveItem(
+		metagoodMarket.RemoveItem(
 			t, b,
 			contracts,
 			userAddress,

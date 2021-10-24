@@ -25,7 +25,7 @@ import NonFungibleToken from "./NonFungibleToken.cdc"
 
  */
 
-pub contract NfinitaMarket {
+pub contract MetagoodMarket {
     // SaleOffer events.
     //
     // A sale offer has been created.
@@ -432,7 +432,7 @@ pub contract NfinitaMarket {
     // use by the collection's owner.
     //
     pub resource interface CollectionManager {
-        pub fun insert(offer: @NfinitaMarket.SaleOffer)
+        pub fun insert(offer: @MetagoodMarket.SaleOffer)
         pub fun remove(collection: Address, itemID: UInt64): @SaleOffer
     }
 
@@ -507,7 +507,7 @@ pub contract NfinitaMarket {
         // insert
         // Insert a SaleOffer into the collection, replacing one with the same itemID if present.
         //
-         pub fun insert(offer: @NfinitaMarket.SaleOffer) {
+         pub fun insert(offer: @MetagoodMarket.SaleOffer) {
             let itemID: UInt64 = offer.itemID
             let collection: Address = offer.collection
             let typeID: UInt64 = offer.typeID
@@ -715,8 +715,8 @@ pub contract NfinitaMarket {
 
     init () {
         //FIXME: REMOVE SUFFIX BEFORE RELEASE
-        self.CollectionStoragePath = /storage/nfinitaMarketCollection007
-        self.CollectionPublicPath = /public/nfinitaMarketCollection007
+        self.CollectionStoragePath = /storage/metagoodMarketCollection007
+        self.CollectionPublicPath = /public/metagoodMarketCollection007
         self.platformVaultCapability = self.account.getCapability<&{FungibleToken.Receiver}>(/public/fusdReceiver)
     }
 }
