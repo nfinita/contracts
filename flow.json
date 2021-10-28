@@ -1,0 +1,62 @@
+{
+	"emulators": {
+		"default": {
+			"port": 3569,
+			"serviceAccount": "emulator-account"
+		}
+	},
+	"contracts": {
+		"FUSD": {
+			"source": "./cadence/contracts/FUSD.cdc",
+			"aliases": {
+				"testnet": "0xe223d8a629e49c68"
+			}
+		},
+		"Profile": "./cadence/contracts/Profile.cdc",
+		"MetaBear": "./cadence/contracts/MetaBear.cdc",
+		"NfinitaMarket": "./cadence/contracts/NfinitaMarket.cdc",
+		"FungibleToken": {
+			"source": "./cadence/contracts/FungibleToken.cdc",
+			"aliases": {
+				"emulator": "0xee82856bf20e2aa6",
+				"testnet": "0x9a0766d93b6608b7"
+			}
+		},
+		"NonFungibleToken": "./cadence/contracts/NonFungibleToken.cdc"
+	},
+	"networks": {
+		"emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+	},
+	"accounts": {
+		"emulator-account": {
+			"address": "${FLOW_ADDRESS}",
+			"keys": "${FLOW_PRIVATE_KEY}"
+		},
+		"testnet-account": {
+			"address": "${FLOW_ADDRESS}",
+			"keys": "${FLOW_PRIVATE_KEY}"
+		}
+	},
+	"deployments": {
+		"testnet": {
+			"testnet-account": [
+				"Profile",
+				"NonFungibleToken",
+				"MetaBear",
+				"NfinitaMarket"
+			]
+		},
+		"emulator": {
+			"emulator-account": [
+				"MetaBear",
+				"NfinitaMarket",
+				"Profile",
+				"FungibleToken",
+				"NonFungibleToken",
+				"FUSD"
+			]
+		}
+	}
+}
