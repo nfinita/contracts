@@ -3,7 +3,7 @@ import NonFungibleToken from "../../contracts/NonFungibleToken.cdc"
 import FUSD from "../../contracts/FUSD.cdc"
 import MetagoodMarket from "../../contracts/MetagoodMarket.cdc"
 
-transaction(itemID: UInt64, price: UFix64, charity: Address?, charityPercentage: UFix64, donationAmount: UFix64, expiryDate: UInt64, collection: Address) {
+transaction(itemID: UInt64, price: UFix64, charity: Address?, charityPercentage: UFix64, donationAmount: UFix64, UInt64, collection: Address) {
     let fusdVault: Capability<&{FungibleToken.Receiver}>
     let collectionCap: Capability<&{NonFungibleToken.Provider, NonFungibleToken.CollectionPublic}>
     let marketCollection: &MetagoodMarket.Collection
@@ -48,7 +48,6 @@ transaction(itemID: UInt64, price: UFix64, charity: Address?, charityPercentage:
     }
 
     execute {
-        let bidVault <- FUSD.createEmptyVault()
         let offer <- MetagoodMarket.createSaleOffer (
             sellerItemProvider: self.collectionCap,
             collectionPublicPath: /public/${pathName},
@@ -56,12 +55,10 @@ transaction(itemID: UInt64, price: UFix64, charity: Address?, charityPercentage:
             itemID: itemID,
             typeID: 0,
             sellerPaymentReceiver: self.fusdVault,
-            bidVault: <- bidVault,
             price: price,
             charity: charity,
             charityPercentage: charityPercentage,
             donationAmount: donationAmount,
-            expiryDate: expiryDate,
         )
         self.marketCollection.insert(offer: <-offer)
     }

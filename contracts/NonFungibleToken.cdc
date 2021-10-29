@@ -109,7 +109,7 @@ pub contract interface NonFungibleToken {
         pub fun borrowNFT(id: UInt64): &NFT
     }
 
-    // Requirement for the the concrete resource type
+    // Requirement for the concrete resource type
     // to be declared in the implementing contract
     //
     pub resource Collection: Provider, Receiver, CollectionPublic {

@@ -5,7 +5,7 @@ import FUSD from "./FUSD.cdc"
 // MetaBear
 //
 // This contract is a boilerplate we will be using
-// to generate collections on the MetaGood (Nfinita) platform.
+// to generate collections on the MetaGood (Metagood) platform.
 pub contract MetaBear: NonFungibleToken {
 
     // Events
@@ -169,8 +169,9 @@ pub contract MetaBear: NonFungibleToken {
             creatorFeeVault: @FungibleToken.Vault,
             platformFeeVault: @FungibleToken.Vault
         ) {
-            if (MetaBear.totalSupply == self.maxSupply) {
-                panic("Max supply reached")
+            pre {
+                MetaBear.totalSupply == self.maxSupply:
+                    "Max supply reached"
             }
 
             let collectionData = self.collectionDataCap.borrow<>()!
@@ -268,7 +269,6 @@ pub contract MetaBear: NonFungibleToken {
 
     pub resource interface CollectionDataPublic {
         pub fun getCollectionImageURL(id: UInt64): String
-        pub fun getCollectionMetadata(): [{String: String}] // TEST PURPOSE
         pub fun getCollectionSetting(_ setting: String): AnyStruct
     }
 
@@ -289,12 +289,6 @@ pub contract MetaBear: NonFungibleToken {
             let attribute = self.settings[setting]!
             return attribute
         }
-
-        // TEST PURPOSE
-        pub fun getCollectionMetadata(): [{String: String}] {
-            return self.metadata
-        }
-        // TEST PURPOSE END
 
         pub fun setCollectionMetadata(metadata: [{String: String}]) {
             self.metadata = metadata

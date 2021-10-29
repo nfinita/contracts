@@ -47,7 +47,6 @@ pub contract MetagoodMarket {
         typeID: UInt64,
         owner: Address,
         price: UFix64,
-        expiryDate: UInt64
     )
 
     // A sale offer has been purchased.
@@ -94,12 +93,9 @@ pub contract MetagoodMarket {
         pub let platformFee: UFix64
         pub let creatorFee: UFix64
         pub let communityFee: UFix64
-        pub let bidVault: @FungibleToken.Vault
-        pub let bids: [{Address: SaleOfferBid}]
         pub let charity: Address?
         pub let charityPercentage: UFix64
         pub(set) var donationAmount: UFix64
-        pub let expiryDate: UInt64
     }
 
     // SaleOfferBid
@@ -145,19 +141,10 @@ pub contract MetagoodMarket {
         // The FUSD vault that will receive that payment if teh sale completes successfully.
         access(self) let sellerPaymentReceiver: Capability<&{FungibleToken.Receiver}>
 
-        // The FUSD vault to store temporary bid tokens
-        pub let bidVault: @FungibleToken.Vault
-
-        // The list of all bids
-        pub let bids: [{Address: SaleOfferBid}]
-
         // Charity parameters
         pub let charity: Address?
         pub let charityPercentage: UFix64
         pub(set) var donationAmount: UFix64
-
-        // Expiry Date in seconds, unix time
-        pub let expiryDate: UInt64
 
         // Recipient's Receiver Capabilities
         pub(set) var recipientVaultCap: Capability<&{FungibleToken.Receiver}>?
@@ -179,7 +166,7 @@ pub contract MetagoodMarket {
         // If they send the correct payment in FUSD, and if the item is still available,
         // the NFT will be placed in their Collection.
         //
-        pub fun accept(
+        access(contract) fun accept(
             buyerCollection: &{NonFungibleToken.Receiver},
             buyerPayment: @FungibleToken.Vault,
             buyerDonation: @FungibleToken.Vault,
@@ -242,55 +229,14 @@ pub contract MetagoodMarket {
             emit SaleOfferAccepted(itemID: self.itemID)
         }
 
-        pub fun settleBids() {
-            self.saleCompleted = true
-
-            /*
-            let charityPercentageMultiple = UFix64(self.charityPercentage) / 100.0
-            let sellerPercentageMultiple = 1.0 - charityPercentageMultiple
-            log(self.charityPercentage)
-            log(charityPercentageMultiple)
-            */
-
-            if self.charity != nil {
-                // Send tokens to charity
-                let charityVault = getAccount(self.charity!).getCapability<&{FungibleToken.Receiver}>(/public/fusdReceiver)
-                assert(
-                    charityVault.borrow() != nil,
-                    message: "Could not borrow charity vault"
-                )
-                log(charityVault)
-                self.sendBidTokens(charityVault, amount: self.donationAmount)
-            }
-
-             // Send tokens to seller
-            self.sendBidTokens(self.sellerPaymentReceiver, amount: self.price)
-        }
-
         pub fun exchangeNFT() {
             let nft <- self.sellerItemProvider.borrow()!.withdraw(withdrawID: self.itemID)
             self.recipientCollection!.borrow()!.deposit(token: <-nft)
         }
 
-        // sendBidTokens sends the percentage of bid tokens to the Vault Receiver belonging to the provided Capability
-        // percentageMultiple must be fraction of the percentage (i.e. 0.25, which equals to 25%)
-        access(contract) fun sendBidTokens(_ capability: Capability<&{FungibleToken.Receiver}>, amount: UFix64) {
-            // borrow a reference to the owner's NFT receiver
-            if let vaultRef = capability.borrow() {
-                let bidVaultRef = &self.bidVault as &FungibleToken.Vault
-                vaultRef.deposit(from: <-bidVaultRef.withdraw(amount: amount))
-            } else {
-                log("sendBidTokens(): couldn't get vault ref")
-                log(capability)
-            }
-        }
-
         // destructor
         //
         destroy() {
-            // Integrate transfer of tokens when the vault is destroyed
-            destroy self.bidVault
-
             // Whether the sale completed or not, publicize that it is being withdrawn.
 
             emit SaleOfferFinished(itemID: self.itemID)
@@ -313,12 +259,9 @@ pub contract MetagoodMarket {
             platformFee: UFix64,
             creatorFee: UFix64,
             communityFee: UFix64,
-            bidVault: @FungibleToken.Vault,
-            bids: [{Address: SaleOfferBid}],
             charity: Address?,
             charityPercentage: UFix64,
             donationAmount: UFix64,
-            expiryDate: UInt64,
         ) {
             pre {
                 sellerItemProvider.borrow() != nil: "Cannot borrow seller."
@@ -338,8 +281,6 @@ pub contract MetagoodMarket {
 
             let collectionRefNFT = collectionRef.borrowNFT(id: itemID) as &NonFungibleToken.NFT
 
-            self.bidVault <- bidVault
-
             self.sellerItemProvider = sellerItemProvider
             self.collection = collection
             self.itemID = itemID
@@ -356,19 +297,11 @@ pub contract MetagoodMarket {
 
             self.recipientVaultCap = nil
             self.recipientCollection = nil
-            self.bids = []
             self.charity = charity
             self.charityPercentage = charityPercentage
             self.donationAmount = donationAmount
 
-            self.expiryDate = expiryDate
-
             emit SaleOfferCreated(itemID: self.itemID, collection: self.collection, price: self.price)
-        }
-
-        // depositBidTokens deposits the bidder's tokens into the AuctionItem's Vault
-        pub fun depositBidTokens(vault: @FungibleToken.Vault) {
-            self.bidVault.deposit(from: <-vault)
         }
     }
 
@@ -382,12 +315,10 @@ pub contract MetagoodMarket {
         itemID: UInt64,
         typeID: UInt64,
         sellerPaymentReceiver: Capability<&{FungibleToken.Receiver}>,
-        bidVault: @FungibleToken.Vault,
         price: UFix64,
         charity: Address?,
         charityPercentage: UFix64,
         donationAmount: UFix64,
-        expiryDate: UInt64,
     ): @SaleOffer {
         let collectionRef = sellerItemProvider.borrow()!
         let nft = collectionRef.borrowNFT(id: itemID) as &NonFungibleToken.NFT
@@ -418,12 +349,9 @@ pub contract MetagoodMarket {
             platformFee: platformFee,
             creatorFee: creatorFee,
             communityFee: communityFee,
-            bidVault: <- bidVault,
-            bids: [],
             charity: charity,
             charityPercentage: charityPercentage,
             donationAmount: donationAmount,
-            expiryDate: expiryDate,
         )
     }
 
@@ -434,38 +362,6 @@ pub contract MetagoodMarket {
     pub resource interface CollectionManager {
         pub fun insert(offer: @MetagoodMarket.SaleOffer)
         pub fun remove(collection: Address, itemID: UInt64): @SaleOffer
-    }
-
-    // CollectionPurchaser
-    // An interface to allow purchasing items via SaleOffers in a collection.
-    // This function is also provided by CollectionPublic, it is here to support
-    // more fine-grained access to the collection for as yet unspecified future use cases.
-    //
-    pub resource interface CollectionPurchaser {
-        pub fun purchase(
-            collection: Address,
-            itemID: UInt64,
-            buyerCollection: &{NonFungibleToken.Receiver},
-            buyerPayment: @FungibleToken.Vault,
-            buyerDonation: @FungibleToken.Vault,
-            buyerPlatformFee: @FungibleToken.Vault,
-            buyerCreatorFee: @FungibleToken.Vault,
-            buyerCommunityFee: @FungibleToken.Vault,
-        )
-
-        pub fun placeBid(
-            collection: Address,
-            itemID: UInt64,
-            buyerCollection: Capability<&NonFungibleToken.Collection{NonFungibleToken.CollectionPublic}>,
-            bidTokens: @FungibleToken.Vault,
-            bidderVaultCap: Capability<&{FungibleToken.Receiver}>,
-            donationAmount: UFix64
-        )
-
-        pub fun settleAuction(
-            collection: Address,
-            itemID: UInt64
-        )
     }
 
     // CollectionPublic
@@ -484,25 +380,13 @@ pub contract MetagoodMarket {
             buyerCreatorFee: @FungibleToken.Vault,
             buyerCommunityFee: @FungibleToken.Vault,
         )
-        pub fun placeBid(
-            collection: Address,
-            itemID: UInt64,
-            buyerCollection: Capability<&NonFungibleToken.Collection{NonFungibleToken.CollectionPublic}>,
-            bidTokens: @FungibleToken.Vault,
-            bidderVaultCap: Capability<&{FungibleToken.Receiver}>,
-            donationAmount: UFix64
-        )
-        pub fun settleAuction(
-            collection: Address,
-            itemID: UInt64
-        )
    }
 
     // Collection
     // A resource that allows its owner to manage a list of SaleOffers, and purchasers to interact with them.
     //
-    pub resource Collection : CollectionManager, CollectionPurchaser, CollectionPublic {
-        pub var saleOffers: @{String: SaleOffer}
+    pub resource Collection : CollectionManager, CollectionPublic {
+        access(self) var saleOffers: @{String: SaleOffer}
 
         // insert
         // Insert a SaleOffer into the collection, replacing one with the same itemID if present.
@@ -512,7 +396,6 @@ pub contract MetagoodMarket {
             let collection: Address = offer.collection
             let typeID: UInt64 = offer.typeID
             let price: UFix64 = offer.price
-            let expiryDate: UInt64 = offer.expiryDate
 
             // add the new offer to the dictionary which removes the old one
             let fullItemId = collection.toString().concat("/".concat(itemID.toString()))
@@ -525,7 +408,6 @@ pub contract MetagoodMarket {
               typeID: typeID,
               owner: self.owner?.address!,
               price: price,
-              expiryDate: expiryDate
             )
         }
 
@@ -561,7 +443,6 @@ pub contract MetagoodMarket {
         ) {
             pre {
                 self.saleOffers[collection.toString().concat("/".concat(itemID.toString()))] != nil: "This sale offer does not exist in the collection!"
-                self.saleOffers[collection.toString().concat("/".concat(itemID.toString()))]?.expiryDate == 0 as UInt64: "This sale offer is for auction!"
             }
             let offer <- self.remove(collection: collection, itemID: itemID)
             let donationAmount = buyerDonation.balance
@@ -602,77 +483,6 @@ pub contract MetagoodMarket {
 
             //FIXME: Is this correct? Or should we return it to the caller to dispose of?
             destroy offer
-        }
-
-        // placeBid
-        //
-        pub fun placeBid(
-            collection: Address,
-            itemID: UInt64,
-            buyerCollection: Capability<&NonFungibleToken.Collection{NonFungibleToken.CollectionPublic}>,
-            bidTokens: @FungibleToken.Vault,
-            bidderVaultCap: Capability<&{FungibleToken.Receiver}>,
-            donationAmount: UFix64
-        ) {
-            pre {
-                self.saleOffers[collection.toString().concat("/".concat(itemID.toString()))] != nil: "This sale offer does not exist in the collection!";
-                self.saleOffers[collection.toString().concat("/".concat(itemID.toString()))]?.expiryDate != 0 as UInt64: "This sale offer is not for auction!"
-            }
-            //let offer <- self.remove(itemID: itemID)
-            //offer.accept(buyerCollection: buyerCollection, buyerPayment: <-bidTokens)
-            //FIXME: Is this correct? Or should we return it to the caller to dispose of?
-            //destroy offer
-            let itemRef = &self.saleOffers[collection.toString().concat("/".concat(itemID.toString()))] as &SaleOffer
-
-            // If there is some bid in the bidVault, return it to the previous bidder
-            // Because it will be replaced by the new higher bid
-            // For bid no 1, this will not be called because the bidVault balance is 0 and recipientVaultCap is nil
-            if itemRef.bidVault.balance != 0.0 {
-                if let vaultCap = itemRef.recipientVaultCap {
-                    itemRef.sendBidTokens(itemRef.recipientVaultCap!, amount: itemRef.bidVault.balance)
-                } else {
-                    panic("unable to get recipient Vault capability")
-                }
-            }
-
-            // Check if bid is larger than price
-            if (bidTokens.balance < itemRef.price) { panic("bid must be higher than current price") }
-
-            // Check if bid donation is larger than donationAmount
-            if (donationAmount < itemRef.donationAmount) { panic("bid donation must be higher than current donation") }
-
-            log(bidderVaultCap)
-
-            // Update the list of bids for this sale
-            let newBid = {bidderVaultCap.address: SaleOfferBid(price: bidTokens.balance, donation: donationAmount)}
-            itemRef.bids.insert(at: 0, newBid)
-
-            // Update the auction item
-            itemRef.depositBidTokens(vault: <- bidTokens)
-            itemRef.updateRecipient(vaultCap: bidderVaultCap, collection: buyerCollection)
-
-            // Update the current price of the token
-            let highestBid = itemRef.bidVault.balance
-            itemRef.price = highestBid - donationAmount
-            itemRef.donationAmount = donationAmount
-        }
-
-         // settleAuction sends the auction item to the highest bidder
-        // and deposits the FungibleTokens into the auction owner's account
-        pub fun settleAuction(collection: Address, itemID: UInt64) {
-            pre {
-                self.saleOffers[collection.toString().concat("/".concat(itemID.toString()))] != nil: "This sale offer does not exist in the collection!";
-                self.saleOffers[collection.toString().concat("/".concat(itemID.toString()))]?.expiryDate != 0 as UInt64: "This sale offer is not for auction!"
-            }
-            let itemRef = &self.saleOffers[collection.toString().concat("/".concat(itemID.toString()))] as &SaleOffer
-
-            // return if there are no bids to settle
-            if itemRef.bids.length == 0 {
-                panic("Nothing to settle. No bids.")
-            }
-
-            itemRef.settleBids()
-            itemRef.exchangeNFT()
         }
 
         // getSaleOfferIDs
