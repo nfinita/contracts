@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 import NonFungibleToken from "./NonFungibleToken.cdc"
 import FungibleToken from "./FungibleToken.cdc"
 import FUSD from "./FUSD.cdc"
