@@ -93,21 +93,16 @@ pub contract MetagoodMarket {
         pub let platformFee: UFix64
         pub let creatorFee: UFix64
         pub let communityFee: UFix64
-        pub let charity: Address?
-        pub let charityPercentage: UFix64
-        pub(set) var donationAmount: UFix64
     }
 
     // SaleOfferBid
-    // A bid for an NFT being offered to sale for a set price and donation amount in FUSD.
+    // A bid for an NFT being offered to sale for a set price in FUSD.
     //
     pub struct SaleOfferBid {
         pub let price: UFix64;
-        pub let donation: UFix64;
 
-        init(price: UFix64, donation: UFix64) {
+        init(price: UFix64) {
             self.price = price;
-            self.donation = donation;
         }
     }
 
@@ -141,11 +136,6 @@ pub contract MetagoodMarket {
         // The FUSD vault that will receive that payment if teh sale completes successfully.
         access(self) let sellerPaymentReceiver: Capability<&{FungibleToken.Receiver}>
 
-        // Charity parameters
-        pub let charity: Address?
-        pub let charityPercentage: UFix64
-        pub(set) var donationAmount: UFix64
-
         // Recipient's Receiver Capabilities
         pub(set) var recipientVaultCap: Capability<&{FungibleToken.Receiver}>?
         pub(set) var recipientCollection: Capability<&NonFungibleToken.Collection{NonFungibleToken.CollectionPublic}>?
@@ -169,7 +159,6 @@ pub contract MetagoodMarket {
         access(contract) fun accept(
             buyerCollection: &{NonFungibleToken.Receiver},
             buyerPayment: @FungibleToken.Vault,
-            buyerDonation: @FungibleToken.Vault,
             buyerPlatformFee: @FungibleToken.Vault,
             buyerCreatorFee: @FungibleToken.Vault,
             buyerCommunityFee: @FungibleToken.Vault,
@@ -209,29 +198,10 @@ pub contract MetagoodMarket {
                 from: <-buyerCommunityFee
             )
 
-            if self.charity != nil {
-                // Send tokens to charity
-                let charityVault = getAccount(self.charity!).getCapability<&{FungibleToken.Receiver}>(/public/fusdReceiver)
-                assert(
-                    charityVault.borrow() != nil,
-                    message: "Could not borrow charity vault"
-                )
-                charityVault.borrow()!.deposit(from: <-buyerDonation)
-            } else {
-                sellerVaultCapability.deposit(
-                    from: <-buyerDonation
-                )
-            }
-
             let nft <- self.sellerItemProvider.borrow()!.withdraw(withdrawID: self.itemID)
             buyerCollection.deposit(token: <-nft)
 
             emit SaleOfferAccepted(itemID: self.itemID)
-        }
-
-        pub fun exchangeNFT() {
-            let nft <- self.sellerItemProvider.borrow()!.withdraw(withdrawID: self.itemID)
-            self.recipientCollection!.borrow()!.deposit(token: <-nft)
         }
 
         // destructor
@@ -259,16 +229,10 @@ pub contract MetagoodMarket {
             platformFee: UFix64,
             creatorFee: UFix64,
             communityFee: UFix64,
-            charity: Address?,
-            charityPercentage: UFix64,
-            donationAmount: UFix64,
         ) {
             pre {
                 sellerItemProvider.borrow() != nil: "Cannot borrow seller."
                 sellerPaymentReceiver.borrow() != nil: "Cannot borrow sellerPaymentReceiver."
-                // charity.borrow() != nil: "Cannot borrow charity"
-                // TODO: Should we change the data type from Address to
-                // TODO: Capability<&{FungibleToken.Receiver}> ?
             }
 
             self.saleCompleted = false
@@ -297,9 +261,6 @@ pub contract MetagoodMarket {
 
             self.recipientVaultCap = nil
             self.recipientCollection = nil
-            self.charity = charity
-            self.charityPercentage = charityPercentage
-            self.donationAmount = donationAmount
 
             emit SaleOfferCreated(itemID: self.itemID, collection: self.collection, price: self.price)
         }
@@ -316,13 +277,10 @@ pub contract MetagoodMarket {
         typeID: UInt64,
         sellerPaymentReceiver: Capability<&{FungibleToken.Receiver}>,
         price: UFix64,
-        charity: Address?,
-        charityPercentage: UFix64,
-        donationAmount: UFix64,
     ): @SaleOffer {
         let collectionRef = sellerItemProvider.borrow()!
         let nft = collectionRef.borrowNFT(id: itemID) as &NonFungibleToken.NFT
-        let metadata = nft.metadata
+        let metadata = nft.getMetadata() as {String: AnyStruct}
         let creatorAddress = metadata["creator"] as! Address? ?? panic("No creator address found!")
         let communityAddress = metadata["community"] as! Address? ?? panic("No creator address found!")
 
@@ -349,9 +307,6 @@ pub contract MetagoodMarket {
             platformFee: platformFee,
             creatorFee: creatorFee,
             communityFee: communityFee,
-            charity: charity,
-            charityPercentage: charityPercentage,
-            donationAmount: donationAmount,
         )
     }
 
@@ -375,7 +330,6 @@ pub contract MetagoodMarket {
             itemID: UInt64,
             buyerCollection: &{NonFungibleToken.Receiver},
             buyerPayment: @FungibleToken.Vault,
-            buyerDonation: @FungibleToken.Vault,
             buyerPlatformFee: @FungibleToken.Vault,
             buyerCreatorFee: @FungibleToken.Vault,
             buyerCommunityFee: @FungibleToken.Vault,
@@ -436,7 +390,6 @@ pub contract MetagoodMarket {
             itemID: UInt64,
             buyerCollection: &{NonFungibleToken.Receiver},
             buyerPayment: @FungibleToken.Vault,
-            buyerDonation: @FungibleToken.Vault,
             buyerPlatformFee: @FungibleToken.Vault,
             buyerCreatorFee: @FungibleToken.Vault,
             buyerCommunityFee: @FungibleToken.Vault,
@@ -445,11 +398,9 @@ pub contract MetagoodMarket {
                 self.saleOffers[collection.toString().concat("/".concat(itemID.toString()))] != nil: "This sale offer does not exist in the collection!"
             }
             let offer <- self.remove(collection: collection, itemID: itemID)
-            let donationAmount = buyerDonation.balance
             offer.accept(
                 buyerCollection: buyerCollection,
                 buyerPayment: <-buyerPayment,
-                buyerDonation: <-buyerDonation,
                 buyerPlatformFee: <-buyerPlatformFee,
                 buyerCreatorFee: <-buyerCreatorFee,
                 buyerCommunityFee: <-buyerCommunityFee,
@@ -469,15 +420,6 @@ pub contract MetagoodMarket {
                 from_: self.owner?.address!,
                 platformFee: offer.platformFee,
             )
-
-            if offer.charity != nil {
-                emit SaleOfferDonated(
-                    itemID: itemID,
-                    from_: self.owner?.address!,
-                    to_: offer.charity,
-                    amount: donationAmount
-                )
-            }
 
             let fullItemId = collection.toString().concat("/".concat(itemID.toString()))
 

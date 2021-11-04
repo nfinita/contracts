@@ -36,7 +36,7 @@ func TestMetagoodMarketSetupAccount(t *testing.T) {
 	})
 }
 
-func TestMetagooMetagoodrketCreateSaleOffer(t *testing.T) {
+func TestMetagoodMarketCreateSaleOffer(t *testing.T) {
 	b := test.NewBlockchain()
 
 	contracts := metagoodMarket.DeployContracts(t, b)
@@ -152,7 +152,6 @@ func TestMetagooMetagoodrketCreateSaleOffer(t *testing.T) {
 			buyerAddress,
 			buyerSigner,
 			saleOfferResourceID,
-			"0.0",
 			userAddress,
 			false,
 		)

@@ -71,14 +71,20 @@ pub contract interface NonFungibleToken {
     pub resource interface INFT {
         // The unique ID that each NFT has
         pub let id: UInt64
-        pub let metadata: {String: AnyStruct}
+
+        // Metadata
+        access(contract) let metadata: {String: AnyStruct}
+        pub fun getMetadata(): {String: AnyStruct}
     }
 
     // Requirement that all conforming NFT smart contracts have
     // to define a resource called NFT that conforms to INFT
     pub resource NFT: INFT {
         pub let id: UInt64
-        pub let metadata: {String: AnyStruct}
+
+        // Metadata
+        access(contract) let metadata: {String: AnyStruct}
+        pub fun getMetadata(): {String: AnyStruct}
     }
 
     // Interface to mediate withdraws from the Collection

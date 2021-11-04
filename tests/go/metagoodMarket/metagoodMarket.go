@@ -187,10 +187,6 @@ func ListItem(
 
 	_ = tx.AddArgument(cadence.NewUInt64(tokenID))
 	_ = tx.AddArgument(test.CadenceUFix64(price))
-	_ = tx.AddArgument(cadence.NewOptional(nil))
-	_ = tx.AddArgument(test.CadenceUFix64("0.0"))
-	_ = tx.AddArgument(test.CadenceUFix64("0.0"))
-	_ = tx.AddArgument(cadence.NewUInt64(0))
 	_ = tx.AddArgument(cadence.NewAddress(contracts.MetaBearAddress))
 
 	result := test.SignAndSubmit(
@@ -228,7 +224,6 @@ func PurchaseItem(
 	userAddress flow.Address,
 	userSigner crypto.Signer,
 	itemID uint64,
-	donation string,
 	marketAddress flow.Address,
 	shouldFail bool,
 ) {
@@ -241,7 +236,6 @@ func PurchaseItem(
 
 	_ = tx.AddArgument(cadence.NewAddress(contracts.MetaBearAddress))
 	_ = tx.AddArgument(cadence.NewUInt64(itemID))
-	_ = tx.AddArgument(test.CadenceUFix64(donation))
 	_ = tx.AddArgument(cadence.NewAddress(marketAddress))
 
 	test.SignAndSubmit(

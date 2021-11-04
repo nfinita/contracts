@@ -36,8 +36,11 @@ pub contract MetaBear: NonFungibleToken {
         // The token's ID
         pub let id: UInt64
 
-        // String mapping to hold metadata
-        pub let metadata: {String: AnyStruct}
+        // Metadata
+        access(contract) let metadata: {String: AnyStruct}
+        pub fun getMetadata(): {String: AnyStruct} {
+            return self.metadata
+        }
 
         // initializer
         //
@@ -170,7 +173,7 @@ pub contract MetaBear: NonFungibleToken {
             platformFeeVault: @FungibleToken.Vault
         ) {
             pre {
-                MetaBear.totalSupply == self.maxSupply:
+                MetaBear.totalSupply < self.maxSupply:
                     "Max supply reached"
             }
 

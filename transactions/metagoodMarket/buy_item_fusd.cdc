@@ -3,9 +3,8 @@ import NonFungibleToken from "../../contracts/NonFungibleToken.cdc"
 import MetagoodMarket from "../../contracts/MetagoodMarket.cdc"
 import FUSD from "../../contracts/FUSD.cdc"
 
-transaction(collection: Address, itemID: UInt64, donation: UFix64, marketCollectionAddress: Address) {
+transaction(collection: Address, itemID: UInt64, marketCollectionAddress: Address) {
     let paymentVault: @FungibleToken.Vault
-    let donationVault: @FungibleToken.Vault
     let platformFeeVault: @FungibleToken.Vault
     let creatorFeeVault: @FungibleToken.Vault
     let communityFeeVault: @FungibleToken.Vault
@@ -29,7 +28,6 @@ transaction(collection: Address, itemID: UInt64, donation: UFix64, marketCollect
         self.platformFeeVault <- mainFUSDVault.withdraw(amount: platformFee)
         self.creatorFeeVault <- mainFUSDVault.withdraw(amount: creatorFee)
         self.communityFeeVault <- mainFUSDVault.withdraw(amount: communityFee)
-        self.donationVault <- mainFUSDVault.withdraw(amount: donation)
 
         self.collection = acct.borrow<&{NonFungibleToken.Receiver}>(
             from: /storage/${pathName}
@@ -42,7 +40,6 @@ transaction(collection: Address, itemID: UInt64, donation: UFix64, marketCollect
             itemID: itemID,
             buyerCollection: self.collection,
             buyerPayment: <- self.paymentVault,
-            buyerDonation: <- self.donationVault,
             buyerPlatformFee: <- self.platformFeeVault,
             buyerCreatorFee: <- self.creatorFeeVault,
             buyerCommunityFee: <- self.communityFeeVault,
