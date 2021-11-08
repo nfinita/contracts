@@ -91,7 +91,7 @@ pub contract MetagoodMarket {
         pub let itemID: UInt64
         pub let collection: Address
         pub let typeID: UInt64
-        pub(set) var price: UFix64
+        pub let price: UFix64
         pub let platformFee: UFix64
         pub let creatorFee: UFix64
         pub let communityFee: UFix64
@@ -125,7 +125,7 @@ pub contract MetagoodMarket {
         pub let typeID: UInt64
 
         // The sale payment price.
-        pub(set) var price: UFix64
+        pub let price: UFix64
 
         // The sale platform fee amounts
         pub let platformFee: UFix64
@@ -425,7 +425,6 @@ pub contract MetagoodMarket {
 
             let fullItemId = collection.toString().concat("/".concat(itemID.toString()))
 
-            //FIXME: Is this correct? Or should we return it to the caller to dispose of?
             destroy offer
         }
 
@@ -468,7 +467,6 @@ pub contract MetagoodMarket {
     }
 
     init () {
-        //FIXME: REMOVE SUFFIX BEFORE RELEASE
         self.CollectionStoragePath = /storage/metagoodMarketCollection007
         self.CollectionPublicPath = /public/metagoodMarketCollection007
         self.platformVaultCapability = self.account.getCapability<&{FungibleToken.Receiver}>(/public/fusdReceiver)
